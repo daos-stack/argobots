@@ -1,12 +1,13 @@
 Name: argobots
-Version: 0.99
+Version: 1.0rc1
 Release: 1%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: GPLv2 or BSD
 Url: http://www.argobots.org/
 #Source: https://api.github.com/repos/pmodels/$(NAME)/tarball/31703b1
-Source: https://api.github.com/repos/pmodels/$(NAME)/tarball/argobots-%{version}.tar.gz
+Source: https://github.com/pmodels/%{name}/releases/download/v%{version}/%{name}-%{version}.tar.gz
+Patch1: %{name}-9d48af0840.patch
 
 # to be able to generate configure if not present
 BuildRequires: autoconf, automake, libtool
@@ -31,7 +32,7 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 Development files for the argobots library.
 
 %prep
-%setup -q -n pmodels-argobots-31703b1
+%autosetup -p1
 
 %build
 if [ ! -f configure ]; then
@@ -62,5 +63,9 @@ rm -f %{buildroot}%{_libdir}/*.la
 %{_includedir}/*
 
 %changelog
-* Wed Apr  3 2019 Brian J. Murrell <brian.murrell@intel.com> - 0.99-1
+* Wed Apr 17 2019 Brian J. Murrell <brian.murrell@intel.com> - 1.0rc-1
+- Update to 1.0rc1
+- Add patch to bring up to 9d48af08
+
+* Wed Apr 03 2019 Brian J. Murrell <brian.murrell@intel.com> - 0.99-1
 - Initial package

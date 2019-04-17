@@ -1,5 +1,5 @@
 NAME    := argobots
-VERSION := 0.99
+VERSION := 1.0rc1
 RELEASE := 1
 DIST    := $(shell rpm --eval %{dist})
 SRPM    := _topdir/SRPMS/$(NAME)-$(VERSION)-$(RELEASE)$(DIST).src.rpm
@@ -8,9 +8,10 @@ RPMS    := _topdir/RPMS/x86_64/$(NAME)-$(VERSION)-$(RELEASE)$(DIST).x86_64.rpm  
 	   _topdir/RPMS/x86_64/$(NAME)-debuginfo-$(VERSION)-$(RELEASE)$(DIST).x86_64.rpm
 SPEC    := $(NAME).spec
 SRC_EXT := gz
-SOURCE  := https://api.github.com/repos/pmodels/$(NAME)/tarball/31703b1
+SOURCE  := https://github.com/pmodels/$(NAME)/releases/download/v$(VERSION)/$(NAME)-$(VERSION).tar.$(SRC_EXT)
 
-SOURCES     := _topdir/SOURCES/$(NAME)-$(VERSION).tar.$(SRC_EXT)
+SOURCES     := _topdir/SOURCES/$(NAME)-$(VERSION).tar.$(SRC_EXT) \
+	       _topdir/SOURCES/$(NAME)-9d48af0840.patch
 TARGETS := $(RPMS) $(SRPM)
 
 all: $(TARGETS)
