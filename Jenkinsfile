@@ -87,12 +87,46 @@ pipeline {
                         }
                     }
                 }
-                stage('Build on Ubuntu 16.04') {
+                stage('Build on Ubuntu 18.04') {
                     agent {
-                        label 'docker_runner'
+                        dockerfile {
+                            filename 'Dockerfile.ubuntu.18.04'
+                            label 'docker_runner'
+                            additionalBuildArgs  '--build-arg UID=$(id -u) ' +
+                                                 "--build-arg CACHEBUST=${currentBuild.startTimeInMillis}"
+                        }
                     }
                     steps {
-                        echo "Building on Ubuntu is not implemented for the moment"
+                        sh '''rm -rf artifacts/ubuntu18.04/
+                              mkdir -p artifacts/ubuntu18.04/
+                              mkdir -p _topdir
+                              rm -rf _topdir/BUILD/
+                              rm -rf _topdir/SOURCES
+                              mkdir -p _topdir/BUILD
+                              mkdir -p _topdir/SOURCES
+                              : "${DEBEMAIL:="nomail@hpdd.intel.com"}"
+                              : "${DEBFULLNAME:="Internal HPDD Devops"}"
+                              : "${LANG:="C.UTF-8"}"
+                              : "${LC_ALL:="C.UTF-8"}"
+                              export DEBEMAIL
+                              export DEBFULLNAME
+                              export LANG
+                              export LC_ALL
+                              if make debs; then
+                                  ls -l _topdir/BUILD
+                                  ln -v _topdir/BUILD/*{.build,.changes,.deb,.dsc,.gz,.xz}  artifacts/ubuntu18.04/
+                                  pushd artifacts/ubuntu18.04/
+                                    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+                                  popd
+                              else
+                                  exit \${PIPESTATUS[0]}
+                              fi'''
+                        sh "cat _topdir/BUILD/*.build"
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'artifacts/ubuntu18.04/**'
+                        }
                     }
                 }
             }
