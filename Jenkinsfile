@@ -113,8 +113,8 @@ pipeline {
                               export LANG
                               export LC_ALL
                               if make debs; then
-                                  ls -l _topdir/BUILD
                                   ln -v _topdir/BUILD/*{.build,.changes,.deb,.dsc,.gz,.xz}  artifacts/ubuntu18.04/
+
                                   pushd artifacts/ubuntu18.04/
                                     dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
                                   popd

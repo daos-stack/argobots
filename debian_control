@@ -1,0 +1,32 @@
+Source: argobots
+Section: unknown
+Priority: extra
+Maintainer: argobots <discuss@argobots.org>
+Build-Depends: autotools-dev,
+	debhelper (>=9)
+Standards-Version: 3.9.5
+Homepage: https://www.argobots.org/
+Vcs-Git: https://github.com/pmodels/argobots.git
+Vcs-Browser: https://github.com/pmodels/argobots
+
+Package: argobots
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: lightweight, low-level threading and tasking framework
+ This release is an experimental version of Argobots that contains
+ features related to user-level threads, tasklets, and some schedulers.
+ .
+ This package contains the shared library.
+
+Package: argobots-dev
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends}
+Description: lightweight, low-level threading and tasking framework
+ This release is an experimental version of Argobots that contains
+ features related to user-level threads, tasklets, and some schedulers.
+ .
+ This package contains the development files.
+
