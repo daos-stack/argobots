@@ -63,7 +63,7 @@ $(subst deb,%,$(DEBS)): $(SPEC) $(SOURCES)
 	tar -C $(DEB_BUILD) --strip-components=1 --atime-preserve \
 	  -xpf _topdir/SOURCES/$(NAME)-$(VERSION).tar.$(SRC_EXT)
 	# patch tarball
-	for f in _topdir/SOURCES/*.patch; do \
+	for f in $(PATCHES); do \
 	  patch -d $(DEB_BUILD) -p1 < $$f; \
 	  done
 	tar -C _topdir/BUILD \
