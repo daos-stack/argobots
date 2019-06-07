@@ -14,11 +14,13 @@ SED_EXPR := 1s/$(DIST)//p
 endif
 SPEC    := $(NAME).spec
 VERSION := $(shell rpm $(COMMON_RPM_ARGS) --specfile --qf '%{version}\n' $(SPEC) | sed -n '1p')
+DOT     := .
 DEB_VERS := $(subst rc,~rc,$(VERSION))
+DEB_RVERS := $(subst $(DOT),\$(DOT),$(DEB_VERS))
+DEB_BVERS := $(basename $(subst ~rc,$(DOT)rc,$(DEB_VERS)))
 RELEASE := $(shell rpm $(COMMON_RPM_ARGS) --specfile --qf '%{release}\n' $(SPEC) | sed -n '$(SED_EXPR)')
 SRPM    := _topdir/SRPMS/$(NAME)-$(VERSION)-$(RELEASE)$(DIST).src.rpm
 RPMS    := $(addsuffix .rpm,$(addprefix _topdir/RPMS/x86_64/,$(shell rpm --specfile $(SPEC))))
-DOT     := .
 DEBS    := $(addsuffix .deb,$(addprefix _topdir/BUILD/,$(subst -$(VERSION),_$(DEB_VERS),$(subst $(DOT)x86_64,_amd64,$(subst -devel-,-dev-,$(shell rpm --specfile $(SPEC)))))))
 DEB_TOP := _topdir/BUILD
 DEB_BUILD := $(DEB_TOP)/$(NAME)-$(DEB_VERS)
@@ -84,9 +86,6 @@ $(DEB_TOP)/.patched: $(DEB_BUILD) $(PATCHES)
 $(subst rpm,%,$(RPMS)): $(SPEC) $(SOURCES)
 	rpmbuild -bb $(COMMON_RPM_ARGS) $(RPM_BUILD_OPTIONS) $(SPEC)
 
-#$(DEB_BUILD)/debian/$(NAME).install \
-#$(DEB_BUILD)/debian/$(NAME)-dev.install
- 
 $(subst deb,%,$(DEBS)): $(DEB_BUILD).tar.$(SRC_EXT) $(DEB_TOP)/.patched
 	# debmake --binaryspec prepping
 	cd $(DEB_BUILD); debmake --binaryspec "$(NAME):lib,$(NAME)-dev:dev"
@@ -116,16 +115,25 @@ $(subst deb,%,$(DEBS)): $(DEB_BUILD).tar.$(SRC_EXT) $(DEB_TOP)/.patched
 	# Unused script templates
 	rm -f $(DEB_BUILD)/debian/$(NAME).preinst
 	rm -f $(DEB_BUILD)/debian/$(NAME).prerm
-	# Source package
-	cd $(DEB_TOP); dpkg-source -i -b $(NAME)-$(DEB_VERS)
-	cd $(DEB_BUILD); debuild -b -us -uc
+	# First build of kits
+	cd $(DEB_BUILD); debuild --no-lintian -b -us -uc
+	cd $(DEB_BUILD); debuild clean
+	# make distclean missed a file
+	rm -f $(DEB_BUILD)/examples/dynamic-es/Makefile
+        # Extract the symbols and fix them
+	rm -rf $(DEB_TOP)/$(NAME)-tmp
+	dpkg-deb -R $(DEB_TOP)/$(NAME)_$(DEB_VERS)-1_amd64.deb \
+	  $(DEB_TOP)/$(NAME)-tmp
+	sed 's/$(DEB_RVERS)-1/$(DEB_BVERS)/' \
+	  $(DEB_TOP)/$(NAME)-tmp/DEBIAN/symbols \
+	  > $(DEB_BUILD)/debian/symbols
+	# Second build with updated symbols + sources and lintian
+	cd $(DEB_BUILD); debuild -us -uc
 	# Convert .orig. from symlink to actual file
 	rm $(DEB_TOP)/$(NAME)_$(DEB_VERS).orig.tar.$(SRC_EXT)
 	mv $(DEB_TOP)/$(NAME)-$(DEB_VERS).tar.$(SRC_EXT) \
 	  $(DEB_TOP)/$(NAME)_$(DEB_VERS).orig.tar.$(SRC_EXT)
-	find $(DEB_BUILD)/debian/tmp/usr -name '*.so.*'
-	find $(DEB_BUILD)/debian/tmp/usr -name '*.pc'
-	find $(DEB_BUILD)/debian/tmp/usr -name '*.h'
+        # dump the files in the packages
 	for f in $(DEB_TOP)/*.deb; do \
 	  echo $$f; dpkg -c $$f; done
 
