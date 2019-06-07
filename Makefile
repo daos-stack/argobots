@@ -52,7 +52,7 @@ v$(VERSION).tar.$(SRC_EXT):
 $(VERSION).tar.$(SRC_EXT):
 	curl -f -L -O '$(SOURCE)'
 
-$(DEB_BUILD)/$(NAME)-$(VERSION): $(notdir SOURCE)
+$(DEB_BUILD)/$(NAME)-$(VERSION): $(notdir $(SOURCE))
 	# Unpack tarball
 	export TAR_OPTIONS="--owner=0 --group=0 --numeric-owner"
 	mkdir -p $(DEB_BUILD)
