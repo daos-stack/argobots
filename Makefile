@@ -52,14 +52,12 @@ v$(VERSION).tar.$(SRC_EXT):
 $(VERSION).tar.$(SRC_EXT):
 	curl -f -L -O '$(SOURCE)'
 
-$(DEB_BUILD)/$(NAME)-$(VERSION): $(SPEC) $(SOURCES)
+$(DEB_BUILD)/$(NAME)-$(VERSION): $(notdir SOURCE)
 	# Unpack tarball
 	export TAR_OPTIONS="--owner=0 --group=0 --numeric-owner"
 	mkdir -p $(DEB_BUILD)
-	tar -C $(DEB_BUILD) --strip-components=1 --atime-preserve \
-	  -xpf _topdir/SOURCES/$(NAME)-$(VERSION).tar.$(SRC_EXT)
-	ln _topdir/SOURCES/$(NAME)-$(VERSION).tar.$(SRC_EXT) \
-	  $(DEB_TOP)/$(NAME)-$(DEB_VERS).tar.$(SRC_EXT)
+	tar -C $(DEB_BUILD) --strip-components=1 --atime-preserve -xpf $<
+	ln $< $(DEB_TOP)/$(NAME)-$(DEB_VERS).tar.$(SRC_EXT)
 
 $(DEB_TOP)/.patched: $(DEB_BUILD)/$(NAME)-$(VERSION) $(PATCHES)
 	# extract patches for Debian
@@ -75,7 +73,7 @@ $(DEB_TOP)/.patched: $(DEB_BUILD)/$(NAME)-$(VERSION) $(PATCHES)
 		mv $$f1 $(DEB_BUILD)/debian/patches/$${fn}_$${f1n}; \
 	  done; \
 	done
-	touch $(DEB_TOP)/.patched
+	touch $@
 
 # see https://stackoverflow.com/questions/2973445/ for why we subst
 # the "rpm" for "%" to effectively turn this into a multiple matching
@@ -111,14 +109,15 @@ $(subst deb,%,$(DEBS)): $(DEB_TOP)/.patched
 	# installed files
 	sed -i 's:^#usr/:usr/:g' \
 	  $(DEB_BUILD)/debian/$(NAME).install
+	cat $(DEB_BUILD)/debian/$(NAME).install
 	sed -i 's:^#usr/i:usr/i:g' \
 	  $(DEB_BUILD)/debian/$(NAME)-dev.install
 	sed -i 's:^#usr/lib/*/p:usr/lib/*/p:g' \
 	  $(DEB_BUILD)/debian/$(NAME)-dev.install
+	cat $(DEB_BUILD)/debian/$(NAME)-dev.install
 	# Unused script templates
 	rm -f $(DEB_BUILD)/debian/$(NAME).preinst
 	rm -f $(DEB_BUILD)/debian/$(NAME).prerm
-
 	# Source package
 	cd $(DEB_TOP); dpkg-source -i -b $(NAME)-$(DEB_VERS)
 	cd $(DEB_BUILD); debuild -b -us -uc
@@ -126,6 +125,11 @@ $(subst deb,%,$(DEBS)): $(DEB_TOP)/.patched
 	rm $(DEB_TOP)/$(NAME)_$(DEB_VERS).orig.tar.$(SRC_EXT)
 	mv $(DEB_TOP)/$(NAME)-$(DEB_VERS).tar.$(SRC_EXT) \
 	  $(DEB_TOP)/$(NAME)_$(DEB_VERS).orig.tar.$(SRC_EXT)
+	find $(DEB_BUILD)/debian/tmp/usr -name '*.so.*'
+	find $(DEB_BUILD)/debian/tmp/usr -name '*.pc'
+	find $(DEB_BUILD)/debian/tmp/usr -name '*.h'
+	for f in $(DEB_BUILD)/*.deb; do \
+	  echo $$f; dpkg -c $$f; done
 
 
 $(SRPM): $(SPEC) $(SOURCES)

@@ -104,8 +104,8 @@ pipeline {
                               rm -rf _topdir/SOURCES
                               mkdir -p _topdir/BUILD
                               mkdir -p _topdir/SOURCES
-                              : "${DEBEMAIL:="nomail@hpdd.intel.com"}"
-                              : "${DEBFULLNAME:="Internal HPDD Devops"}"
+                              : "${DEBEMAIL:="daos@daos.groups.io"}"
+                              : "${DEBFULLNAME:="daos-stack"}"
                               : "${LANG:="C.UTF-8"}"
                               : "${LC_ALL:="C.UTF-8"}"
                               export DEBEMAIL
