@@ -117,7 +117,8 @@ $(subst deb,%,$(DEBS)): $(DEB_BUILD).tar.$(SRC_EXT) $(DEB_TOP)/.patched
 	rm -f $(DEB_BUILD)/debian/$(NAME).prerm
 	# First build of kits
 	cd $(DEB_BUILD); debuild --no-lintian -b -us -uc
-	cd $(DEB_BUILD); debuild clean
+	# Broken on Ubuntu 18.04 cd $(DEB_BUILD); debuild clean
+	cd $(DEB_BUILD); dh clean --with "autotools-dev"
 	# make distclean missed a file
 	rm -f $(DEB_BUILD)/examples/dynamic-es/Makefile
         # Extract the symbols and fix them
