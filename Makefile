@@ -104,17 +104,20 @@ $(subst deb,%,$(DEBS)): $(DEB_BUILD).tar.$(SRC_EXT) $(DEB_TOP)/.patched
 	  $(DEB_BUILD)/debian/copyright
 	sed -i 's#url://example.com#$(PROJECT_URL)#' \
 	  $(DEB_BUILD)/debian/copyright
-	echo "On Debian systems, the full text of the GNU General Public" \
+	echo "License: GPL-2 and GPL-3 notices
+	echo ' .' >> $(DEB_BUILD)/debian/copyright
+	echo " On Debian systems, the full text of the GNU General Public" \
 	  >> $(DEB_BUILD)/debian/copyright
-	echo "License version 2 can be found in the file" \
+	echo " License version 2 can be found in the file" \
 	  >> $(DEB_BUILD)/debian/copyright
-	echo '`/usr/share/common-licenses/GPL-2'"'." \
+	echo ' `/usr/share/common-licenses/GPL-2'"'." \
 	  >> $(DEB_BUILD)/debian/copyright
-	echo "On Debian systems, the full text of the GNU General Public" \
+	echo ' .' >> $(DEB_BUILD)/debian/copyright
+	echo " On Debian systems, the full text of the GNU General Public" \
 	  >> $(DEB_BUILD)/debian/copyright
-	echo "License version 3 can be found in the file" \
+	echo " License version 3 can be found in the file" \
 	  >> $(DEB_BUILD)/debian/copyright
-	echo '`/usr/share/common-licenses/GPL-3'"'." \
+	echo ' `/usr/share/common-licenses/GPL-3'"'." \
 	  >> $(DEB_BUILD)/debian/copyright
 	# Unused script templates
 	rm -f $(DEB_BUILD)/debian/$(NAME).preinst
