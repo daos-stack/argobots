@@ -104,13 +104,13 @@ $(subst deb,%,$(DEBS)): $(DEB_BUILD).tar.$(SRC_EXT) $(DEB_TOP)/.patched
 	  $(DEB_BUILD)/debian/copyright
 	sed -i 's#url://example.com#$(PROJECT_URL)#' \
 	  $(DEB_BUILD)/debian/copyright
-	echo "On Debian Systems, the full text of the GNU General Public" \
+	echo "On Debian systems, the full text of the GNU General Public" \
 	  >> $(DEB_BUILD)/debian/copyright
 	echo "License version 2 can be found in the file" \
 	  >> $(DEB_BUILD)/debian/copyright
 	echo '`/usr/share/common-licenses/GPL-2'"'." \
 	  >> $(DEB_BUILD)/debian/copyright
-	echo "On Debian Systems, the full text of the GNU General Public" \
+	echo "On Debian systems, the full text of the GNU General Public" \
 	  >> $(DEB_BUILD)/debian/copyright
 	echo "License version 3 can be found in the file" \
 	  >> $(DEB_BUILD)/debian/copyright
