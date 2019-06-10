@@ -1,10 +1,10 @@
 Source: argobots
 Section: unknown
-Priority: extra
+Priority: optional
 Maintainer: daos-stack <daos@daos.groups.io>
 Build-Depends: autotools-dev,
 	debhelper (>=9)
-Standards-Version: 3.9.5
+Standards-Version: 4.1.4
 Homepage: https://wiki.hpdd.intel.com/display/DC/DAOS+Community+Home
 Vcs-Git: https://github.com/pmodels/argobots.git
 Vcs-Browser: https://github.com/pmodels/argobots
