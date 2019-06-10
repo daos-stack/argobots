@@ -104,7 +104,8 @@ $(subst deb,%,$(DEBS)): $(DEB_BUILD).tar.$(SRC_EXT) $(DEB_TOP)/.patched
 	  $(DEB_BUILD)/debian/copyright
 	sed -i 's#url://example.com#$(PROJECT_URL)#' \
 	  $(DEB_BUILD)/debian/copyright
-	echo "License: GPL-2 and GPL-3 notices"
+	echo "License: GPL-2 and GPL-3 notices" \
+	  >> $(DEB_BUILD)/debian/copyright
 	echo ' .' >> $(DEB_BUILD)/debian/copyright
 	echo " On Debian systems, the full text of the GNU General Public" \
 	  >> $(DEB_BUILD)/debian/copyright
