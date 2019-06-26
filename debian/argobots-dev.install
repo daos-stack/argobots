@@ -3,4 +3,6 @@
 # run rules/install to find out which file should be copied from debian/tmp
 # to the binary packages.
 # For this package, files in the following directory may be the candidates.
-usr/lib/*/*.so.[0123456789]*
+usr/include
+usr/lib/*/*.so
+usr/lib/*/pkgconfig/*.pc

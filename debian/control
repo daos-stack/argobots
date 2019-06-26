@@ -1,5 +1,5 @@
 Source: argobots
-Section: unknown
+Section: libs
 Priority: optional
 Maintainer: daos-stack <daos@daos.groups.io>
 Build-Depends: autotools-dev,
@@ -9,7 +9,8 @@ Homepage: https://wiki.hpdd.intel.com/display/DC/DAOS+Community+Home
 Vcs-Git: https://github.com/pmodels/argobots.git
 Vcs-Browser: https://github.com/pmodels/argobots
 
-Package: argobots
+Package: argobots1
+Section: libs
 Architecture: any
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
@@ -21,9 +22,10 @@ Description: lightweight, low-level threading and tasking framework
  This package contains the shared library.
 
 Package: argobots-dev
+Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: ${misc:Depends}
+Depends: argobots1 (= ${binary:Version}), ${misc:Depends}
 Description: lightweight, low-level threading and tasking framework
  This release is an experimental version of Argobots that contains
  features related to user-level threads, tasklets, and some schedulers.
