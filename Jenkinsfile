@@ -101,9 +101,7 @@ pipeline {
                               mkdir -p artifacts/ubuntu18.04/
                               mkdir -p _topdir
                               rm -rf _topdir/BUILD/
-                              rm -rf _topdir/SOURCES
                               mkdir -p _topdir/BUILD
-                              mkdir -p _topdir/SOURCES
                               : "${DEBEMAIL:="daos@daos.groups.io"}"
                               : "${DEBFULLNAME:="daos-stack"}"
                               : "${LANG:="C.UTF-8"}"
