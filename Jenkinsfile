@@ -105,6 +105,8 @@ pipeline {
                     }
                 }
                 stage('Build on SLES 12.3') {
+                    when { beforeAgent true
+                           environment name: 'SLES12_3_DOCKER', value: 'true' }
                     agent {
                         dockerfile {
                             filename 'Dockerfile.sles.12.3'
@@ -179,6 +181,7 @@ pipeline {
                         sh '''rm -rf artifacts/ubuntu18.04/
                               mkdir -p artifacts/ubuntu18.04/
                               mkdir -p _topdir
+                              rm -rf *.tar.gz
                               rm -rf _topdir/BUILD/
                               mkdir -p _topdir/BUILD
                               : "${DEBEMAIL:="daos@daos.groups.io"}"
