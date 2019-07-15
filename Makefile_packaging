@@ -32,11 +32,18 @@ DEB_TARBASE := $(DEB_TOP)/$(DEB_NAME)_$(DEB_VERS)
 DEBS    := $(addsuffix _$(DEB_VERS)-1_amd64.deb,$(shell sed -n '/-udeb/b; s,^Package:[[:blank:]],$(DEB_TOP)/,p' debian/control))
 SOURCES := $(addprefix _topdir/SOURCES/,$(notdir $(SOURCE)) $(PATCHES))
 ifeq ($(ID_LIKE),debian)
+CLEAN_TARBALS := $(shell rm -f *.tar.$(SRC_EXT))
 TARGETS := $(DEBS)
 else
 TARGETS := $(RPMS) $(SRPM)
 endif
-
+#Ubuntu Containers do not set these
+ifndef LANG
+export LANG = C.UTF-8
+endif
+ifndef LC_ALL
+export LC_ALL = C.UTF-8
+endif
 all: $(TARGETS)
 
 %/:
@@ -171,6 +178,14 @@ mockbuild: $(SRPM) Makefile
 rpmlint: $(SPEC)
 	rpmlint $<
 
+check-env:
+ifndef DEBEMAIL
+	$(error DEBEMAIL is undefined)
+endif
+ifndef DEBFULLNAME
+	$(error DEBFULLNAME is undefined)
+endif
+
 show_version:
 	@echo $(VERSION)
 
@@ -189,4 +204,4 @@ show_sources:
 show_targets:
 	@echo $(TARGETS)
 
-.PHONY: srpm rpms debs ls mockbuild rpmlint FORCE show_version show_release show_rpms show_source show_sources show_targets
+.PHONY: srpm rpms debs ls mockbuild rpmlint FORCE show_version show_release show_rpms show_source show_sources show_targets check-env
