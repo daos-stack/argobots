@@ -84,7 +84,7 @@ $(DEB_TOP)/.detar: $(notdir $(SOURCE))
 	touch $@
 
 # Extract patches for Debian
-$(DEB_TOP)/.patched: $(PATCHES) | $(DEB_BUILD)/debian/
+$(DEB_TOP)/.patched: $(PATCHES) check-env | $(DEB_BUILD)/debian/
 	mkdir -p ${DEB_BUILD}/debian/patches
 	mkdir -p $(DEB_TOP)/patches
 	for f in $(PATCHES); do \
