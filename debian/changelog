@@ -1,0 +1,7 @@
+argobots (1.0~rc1-1) unstable; urgency=medium
+
+  [ John Malmberg ]
+  * Patched Upstream release candidate
+  * Experimental build for daos-stack project
+
+ -- John E. Malmberg <john.e.malmberge@intel.com>  Wed, 26 Jun 2019 15:22:40 +0000

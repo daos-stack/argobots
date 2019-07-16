@@ -105,6 +105,8 @@ pipeline {
                     }
                 }
                 stage('Build on SLES 12.3') {
+                    when { beforeAgent true
+                           environment name: 'SLES12_3_DOCKER', value: 'true' }
                     agent {
                         dockerfile {
                             filename 'Dockerfile.sles.12.3'
@@ -178,32 +180,26 @@ pipeline {
                     steps {
                         sh '''rm -rf artifacts/ubuntu18.04/
                               mkdir -p artifacts/ubuntu18.04/
-                              mkdir -p _topdir
-                              rm -rf _topdir/BUILD/
-                              rm -rf _topdir/SOURCES
-                              mkdir -p _topdir/BUILD
-                              mkdir -p _topdir/SOURCES
-                              : "${DEBEMAIL:="nomail@hpdd.intel.com"}"
-                              : "${DEBFULLNAME:="Internal HPDD Devops"}"
-                              : "${LANG:="C.UTF-8"}"
-                              : "${LC_ALL:="C.UTF-8"}"
+                              : "${DEBEMAIL:="$env.DAOS_EMAIL"}"
+                              : "${DEBFULLNAME:="$env.DAOS_FULLNAME"}"
                               export DEBEMAIL
                               export DEBFULLNAME
-                              export LANG
-                              export LC_ALL
-                              if make debs; then
-                                  ls -l _topdir/BUILD
-                                  ln -v _topdir/BUILD/*{.build,.changes,.deb,.dsc,.gz,.xz}  artifacts/ubuntu18.04/
-                                  pushd artifacts/ubuntu18.04/
-                                    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
-                                  popd
-                              else
-                                  exit \${PIPESTATUS[0]}
-                              fi'''
-                        sh "cat _topdir/BUILD/*.build"
+                              make debs'''
                     }
                     post {
-                        always {
+                        success {
+                            sh '''ln -v \
+                                   _topdir/BUILD/*{.build,.changes,.deb,.dsc,.gz,.xz} \
+                                   artifacts/ubuntu18.04/
+                                  pushd artifacts/ubuntu18.04/
+                                    dpkg-scanpackages . /dev/null | \
+                                      gzip -9c > Packages.gz
+                                  popd'''
+                            archiveArtifacts artifacts: 'artifacts/ubuntu18.04/**'
+                        }
+                        failure {
+                            sh script: "cat _topdir/BUILD/*.build",
+                               returnStatus: true
                             archiveArtifacts artifacts: 'artifacts/ubuntu18.04/**'
                         }
                     }
