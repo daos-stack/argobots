@@ -72,19 +72,19 @@ $(DEB_BUILD)/%: % | $(DEB_BUILD)/
 $(DEB_BUILD).tar.$(SRC_EXT): $(notdir $(SOURCE)) | $(DEB_TOP)/
 	ln -f $< $@
 
-$(DEB_TARBASE).orig.tar.$(SRC_EXT) : \
-	  $(DEB_BUILD).tar.$(SRC_EXT)
+$(DEB_TARBASE).orig.tar.$(SRC_EXT) : $(DEB_BUILD).tar.$(SRC_EXT)
 	ln -f $< $@
 
-$(DEB_TOP)/.detar: $(notdir $(SOURCE))
+$(DEB_TOP)/.detar: $(notdir $(SOURCE)) $(DEB_TARBASE).orig.tar.$(SRC_EXT) 
 	# Unpack tarball
-	export TAR_OPTIONS="--owner=0 --group=0 --numeric-owner"
+	rm -rf ./$(DEB_BUILD)/*
 	mkdir -p $(DEB_BUILD)
-	tar -C $(DEB_BUILD) --strip-components=1 --atime-preserve -xpf $<
+	tar -C $(DEB_BUILD) --strip-components=1 -xpf $<
 	touch $@
 
 # Extract patches for Debian
-$(DEB_TOP)/.patched: $(PATCHES) check-env | $(DEB_BUILD)/debian/
+$(DEB_TOP)/.patched: $(PATCHES) check-env $(DEB_TOP)/.detar | \
+	$(DEB_BUILD)/debian/
 	mkdir -p ${DEB_BUILD}/debian/patches
 	mkdir -p $(DEB_TOP)/patches
 	for f in $(PATCHES); do \
@@ -113,7 +113,7 @@ $(DEB_TOP)/.patched: $(PATCHES) check-env | $(DEB_BUILD)/debian/
 
 # Move the debian files into the Debian directory.
 $(DEB_TOP)/.deb_files : $(shell find debian -type f) \
-	  $(DEB_TARBASE).orig.tar.$(SRC_EXT) | \
+	  $(DEB_TOP)/.detar | \
 	  $(DEB_BUILD)/debian/
 	find debian -maxdepth 1 -type f -exec cp '{}' '$(DEB_BUILD)/{}' ';'
 	if [ -e debian/source ]; then \
@@ -177,6 +177,10 @@ mockbuild: $(SRPM) Makefile
 
 rpmlint: $(SPEC)
 	rpmlint $<
+
+# Debian wants a distclean target
+#distclean:
+#	@echo "distclean"
 
 check-env:
 ifndef DEBEMAIL
