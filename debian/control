@@ -8,7 +8,7 @@ Homepage: https://wiki.hpdd.intel.com/display/DC/DAOS+Community+Home
 Vcs-Git: https://github.com/pmodels/argobots.git
 Vcs-Browser: https://github.com/pmodels/argobots
 
-Package: argobots1
+Package: libabt0
 Section: libs
 Architecture: any
 Multi-Arch: same
@@ -20,11 +20,11 @@ Description: lightweight, low-level threading and tasking framework
  .
  This package contains the shared library.
 
-Package: argobots-dev
+Package: libabt-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: argobots1 (= ${binary:Version}), ${misc:Depends}
+Depends: libabt0 (= ${binary:Version}), ${misc:Depends}
 Description: lightweight, low-level threading and tasking framework
  This release is an experimental version of Argobots that contains
  features related to user-level threads, tasklets, and some schedulers.

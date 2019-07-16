@@ -73,6 +73,7 @@ $(DEB_BUILD).tar.$(SRC_EXT): $(notdir $(SOURCE)) | $(DEB_TOP)/
 	ln -f $< $@
 
 $(DEB_TARBASE).orig.tar.$(SRC_EXT) : $(DEB_BUILD).tar.$(SRC_EXT)
+	rm -f $(DEB_TOP)/*.orig.tar.*
 	ln -f $< $@
 
 $(DEB_TOP)/.detar: $(notdir $(SOURCE)) $(DEB_TARBASE).orig.tar.$(SRC_EXT) 
@@ -138,6 +139,10 @@ $(subst rpm,%,$(RPMS)): $(SPEC) $(SOURCES)
 
 $(subst deb,%,$(DEBS)): $(DEB_BUILD).tar.$(SRC_EXT) \
 	  $(DEB_TOP)/.deb_files $(DEB_TOP)/.detar $(DEB_TOP)/.patched
+	rm -f $(DEB_TOP)/*.deb $(DEB_TOP)/*.ddeb $(DEB_TOP)/*.dsc \
+	      $(DEB_TOP)/*.dsc $(DEB_TOP)/*.build* $(DEB_TOP)/*.changes \
+	      $(DEB_TOP)/*.debian.tar.*
+	rm -rf $(DEB_TOP)/*-tmp
 	cd $(DEB_BUILD); debuild --no-lintian -b -us -uc
 	cd $(DEB_BUILD); debuild -- clean
 	git status
