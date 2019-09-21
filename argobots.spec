@@ -1,6 +1,6 @@
 Name: argobots
 Version: 1.0rc1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: GPLv2 or BSD
@@ -9,6 +9,8 @@ Url: http://www.argobots.org/
 Source: https://github.com/pmodels/%{name}/releases/download/v%{version}/%{name}-%{version}.tar.gz
 Patch1: %{name}-9d48af0840.patch
 Patch2: %{name}-9d48af0840...89507c1f8c.patch
+
+BuildRequires: pkgconfig
 
 # to be able to generate configure if not present
 BuildRequires: autoconf, automake, libtool
@@ -96,6 +98,9 @@ rm -f %{buildroot}%{_libdir}/*.la
 %{_includedir}/*
 
 %changelog
+* Sat Sep 21 2019 Brian J. Murrell <brian.murrell@intel.com> - 1.0rc-4
+- Add BR: pkgconfig
+
 * Sat Sep 21 2019 Brian J. Murrell <brian.murrell@intel.com> - 1.0rc-3
 - Revert libabt0 packaging for EL7; RH just doesn't do that
 
