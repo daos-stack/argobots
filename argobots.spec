@@ -1,6 +1,6 @@
 Name: argobots
 Version: 1.0rc1
-Release: 2%{?dist}
+Release: 3%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: GPLv2 or BSD
@@ -24,6 +24,7 @@ Argobots is a lightweight, low-level threading and tasking framework.
 This release is an experimental version of Argobots that contains
 features related to user-level threads, tasklets, and some schedulers.
 
+%if (0%{?suse_version} >= 1315)
 %package -n libabt0
 Summary: Development files for the argobots library
 Group: System Environment/Libraries
@@ -40,6 +41,14 @@ Group: System Environment/Libraries
 Requires: libabt0%{?_isa} = %{version}-%{release}
 
 %description -n libabt-devel
+%else
+%package devel
+Summary: Development files for the argobots library
+Group: System Environment/Libraries
+Requires: %{name}%{?_isa} = %{version}-%{release}
+
+%description devel
+%endif
 Development files for the argobots library.
 
 %prep
@@ -59,21 +68,37 @@ make %{?_smp_mflags} V=1
 # remove unpackaged files from the buildroot
 rm -f %{buildroot}%{_libdir}/*.la
 
+%if (0%{?suse_version} >= 1315)
+%post -n libabt0 -p /sbin/ldconfig
+%postun -n libabt0 -p /sbin/ldconfig
+%else
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
+%endif
 
+%if (0%{?suse_version} >= 1315)
 %files -n libabt0
+%else
+%files
+%endif
 %{_libdir}/*.so.*
 %license COPYRIGHT
 %doc README
 
+%if (0%{?suse_version} >= 1315)
 %files -n libabt-devel
+%else
+%files devel
+%endif
 %{_libdir}/*.so
 %{_libdir}/*.a
 %{_libdir}/pkgconfig/*
 %{_includedir}/*
 
 %changelog
+* Sat Sep 21 2019 Brian J. Murrell <brian.murrell@intel.com> - 1.0rc-3
+- Revert libabt0 packaging for EL7; RH just doesn't do that
+
 * Fri Sep 20 2019 Brian J. Murrell <brian.murrell@intel.com> - 1.0rc-2
 - Add patch to bring up to 89507c1f8c
 - Create a libabt0 subpackage
