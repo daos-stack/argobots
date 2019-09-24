@@ -1,0 +1,1569 @@
+From 758c993185bc17bd89ee9889b745f077c66fa019 Mon Sep 17 00:00:00 2001
+From: Shintaro Iwasaki <siwasaki@anl.gov>
+Date: Tue, 7 May 2019 08:45:06 -0500
+Subject: [PATCH 1/9] pool: support pool_print_all.
+
+This patch supports a new feature, pool_print_all, which is for printing all
+elements in a pool. A print function passed to ABT_pool_print_all by the users is
+applied to all the units in a pool. This new feature is useful to debug and
+profile a program. This implementation is optional, so if a custom pool does not
+implement p_print_all, ABT_pool_print_all returns an error.
+
+Note that a print function passed by the users may not have any side effect.
+For example, changing the state of ABT_unit in the print function is forbidden.
+
+Signed-off-by: Bruno Faccini <bruno.faccini@intel.com>
+Signed-off-by: Pavan Balaji <balaji@anl.gov>
+---
+ src/include/abt.h.in |    5 +++++
+ src/include/abti.h   |    1 +
+ src/pool/fifo.c      |   34 +++++++++++++++++++++++++---------
+ src/pool/fifo_wait.c |   27 +++++++++++++++++++++++++++
+ src/pool/pool.c      |   40 ++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 98 insertions(+), 9 deletions(-)
+
+diff --git a/src/include/abt.h.in b/src/include/abt.h.in
+index a36aef5..61505cf 100644
+--- a/src/include/abt.h.in
++++ b/src/include/abt.h.in
+@@ -318,6 +318,8 @@ typedef ABT_unit      (*ABT_pool_pop_fn)(ABT_pool);
+ typedef ABT_unit      (*ABT_pool_pop_timedwait_fn)(ABT_pool, double);
+ typedef int           (*ABT_pool_remove_fn)(ABT_pool, ABT_unit);
+ typedef int           (*ABT_pool_free_fn)(ABT_pool);
++typedef int           (*ABT_pool_print_all_fn)(ABT_pool, void *arg,
++                                               void (*)(void*, ABT_unit));
+ 
+ typedef struct {
+     ABT_pool_access access; /* Access type */
+@@ -339,6 +341,7 @@ typedef struct {
+     ABT_pool_pop_timedwait_fn p_pop_timedwait;
+     ABT_pool_remove_fn   p_remove;
+     ABT_pool_free_fn     p_free;
++    ABT_pool_print_all_fn p_print_all;
+ } ABT_pool_def;
+ 
+ 
+@@ -426,6 +429,8 @@ int ABT_pool_pop(ABT_pool pool, ABT_unit *unit) ABT_API_PUBLIC;
+ int ABT_pool_pop_timedwait(ABT_pool pool, ABT_unit *unit, double abstime_secs) ABT_API_PUBLIC;
+ int ABT_pool_remove(ABT_pool pool, ABT_unit unit) ABT_API_PUBLIC;
+ int ABT_pool_push(ABT_pool pool, ABT_unit unit) ABT_API_PUBLIC;
++int ABT_pool_print_all(ABT_pool pool, void *arg,
++                       void (*print_fn)(void *arg, ABT_unit)) ABT_API_PUBLIC;
+ int ABT_pool_set_data(ABT_pool pool, void *data) ABT_API_PUBLIC;
+ int ABT_pool_get_data(ABT_pool pool, void **data) ABT_API_PUBLIC;
+ int ABT_pool_add_sched(ABT_pool pool, ABT_sched sched) ABT_API_PUBLIC;
+diff --git a/src/include/abti.h b/src/include/abti.h
+index ea87af3..2aab50e 100644
+--- a/src/include/abti.h
++++ b/src/include/abti.h
+@@ -314,6 +314,7 @@ struct ABTI_pool {
+     ABT_pool_pop_timedwait_fn      p_pop_timedwait;
+     ABT_pool_remove_fn             p_remove;
+     ABT_pool_free_fn               p_free;
++    ABT_pool_print_all_fn          p_print_all;
+ };
+ 
+ struct ABTI_unit {
+diff --git a/src/pool/fifo.c b/src/pool/fifo.c
+index 5f3d051..478b6e5 100644
+--- a/src/pool/fifo.c
++++ b/src/pool/fifo.c
+@@ -35,6 +35,8 @@ static ABT_unit pool_pop_private(ABT_pool pool);
+ static ABT_unit pool_pop_timedwait(ABT_pool pool, double abstime_secs);
+ static int      pool_remove_shared(ABT_pool pool, ABT_unit unit);
+ static int      pool_remove_private(ABT_pool pool, ABT_unit unit);
++static int      pool_print_all(ABT_pool pool, void *arg,
++                               void (*print_fn)(void *, ABT_unit));
+ 
+ typedef ABTI_unit unit_t;
+ static ABT_unit_type unit_get_type(ABT_unit unit);
+@@ -92,6 +94,7 @@ int ABTI_pool_get_fifo_def(ABT_pool_access access, ABT_pool_def *p_def)
+     p_def->p_free               = pool_free;
+     p_def->p_get_size           = pool_get_size;
+     p_def->p_pop_timedwait      = pool_pop_timedwait;
++    p_def->p_print_all          = pool_print_all;
+     p_def->u_get_type           = unit_get_type;
+     p_def->u_get_thread         = unit_get_thread;
+     p_def->u_get_task           = unit_get_task;
+@@ -390,21 +393,34 @@ static int pool_remove_private(ABT_pool pool, ABT_unit unit)
+     return ABT_SUCCESS;
+ }
+ 
+-#if 0
+-int pool_print(ABT_pool pool)
+-{
++
++static int pool_print_all(ABT_pool pool, void *arg,
++                          void (*print_fn)(void *, ABT_unit)) {
++    ABT_pool_access access;
+     ABTI_pool *p_pool = ABTI_pool_get_ptr(pool);
+     void *data = ABTI_pool_get_data(p_pool);
+     data_t *p_data = pool_get_data_ptr(data);
+-    printf("[");
+-    printf("num_units: %zu ", p_data->num_units);
+-    printf("head: %p ", p_data->p_head);
+-    printf("tail: %p", p_data->p_tail);
+-    printf("]");
++
++    ABT_pool_get_access(pool, &access);
++    if (access != ABT_POOL_ACCESS_PRIV) {
++        ABTI_spinlock_acquire(&p_data->mutex);
++    }
++
++    size_t num_units = p_data->num_units;
++    unit_t *p_unit = p_data->p_head;
++    while (num_units--) {
++        ABTI_ASSERT(p_unit);
++        ABT_unit unit = (ABT_unit)p_unit;
++        print_fn(arg, unit);
++        p_unit = p_unit->p_next;
++    }
++
++    if (access != ABT_POOL_ACCESS_PRIV) {
++        ABTI_spinlock_release(&p_data->mutex);
++    }
+ 
+     return ABT_SUCCESS;
+ }
+-#endif
+ 
+ 
+ /* Unit functions */
+diff --git a/src/pool/fifo_wait.c b/src/pool/fifo_wait.c
+index 8001035..8daeeda 100644
+--- a/src/pool/fifo_wait.c
++++ b/src/pool/fifo_wait.c
+@@ -14,6 +14,8 @@ static void     pool_push(ABT_pool pool, ABT_unit unit);
+ static ABT_unit pool_pop(ABT_pool pool);
+ static ABT_unit pool_pop_timedwait(ABT_pool pool, double abstime_secs);
+ static int      pool_remove(ABT_pool pool, ABT_unit unit);
++static int      pool_print_all(ABT_pool pool, void *arg,
++                               void (*print_fn)(void *, ABT_unit));
+ 
+ typedef ABTI_unit unit_t;
+ static ABT_unit_type unit_get_type(ABT_unit unit);
+@@ -48,6 +50,7 @@ int ABTI_pool_get_fifo_wait_def(ABT_pool_access access, ABT_pool_def *p_def)
+     p_def->p_pop                = pool_pop;
+     p_def->p_pop_timedwait      = pool_pop_timedwait;
+     p_def->p_remove             = pool_remove;
++    p_def->p_print_all          = pool_print_all;
+     p_def->u_get_type           = unit_get_type;
+     p_def->u_get_thread         = unit_get_thread;
+     p_def->u_get_task           = unit_get_task;
+@@ -246,6 +249,30 @@ static int pool_remove(ABT_pool pool, ABT_unit unit)
+     return ABT_SUCCESS;
+ }
+ 
++static int pool_print_all(ABT_pool pool, void *arg,
++                          void (*print_fn)(void *, ABT_unit)) {
++    ABT_pool_access access;
++    ABTI_pool *p_pool = ABTI_pool_get_ptr(pool);
++    void *data = ABTI_pool_get_data(p_pool);
++    data_t *p_data = pool_get_data_ptr(data);
++
++    ABT_pool_get_access(pool, &access);
++    pthread_mutex_lock(&p_data->mutex);
++
++    size_t num_units = p_data->num_units;
++    unit_t *p_unit = p_data->p_head;
++    while (num_units--) {
++        ABTI_ASSERT(p_unit);
++        ABT_unit unit = (ABT_unit)p_unit;
++        print_fn(arg, unit);
++        p_unit = p_unit->p_next;
++    }
++
++    pthread_mutex_unlock(&p_data->mutex);
++
++    return ABT_SUCCESS;
++}
++
+ /* Unit functions */
+ 
+ static ABT_unit_type unit_get_type(ABT_unit unit)
+diff --git a/src/pool/pool.c b/src/pool/pool.c
+index 3cb96d9..1748745 100644
+--- a/src/pool/pool.c
++++ b/src/pool/pool.c
+@@ -63,6 +63,7 @@ int ABT_pool_create(ABT_pool_def *def, ABT_pool_config config,
+     p_pool->p_pop_timedwait      = def->p_pop_timedwait;
+     p_pool->p_remove             = def->p_remove;
+     p_pool->p_free               = def->p_free;
++    p_pool->p_print_all          = def->p_print_all;
+     p_pool->id                   = ABTI_pool_get_new_id();
+     LOG_EVENT("[P%" PRIu64 "] created\n", p_pool->id);
+ 
+@@ -376,6 +377,45 @@ int ABT_pool_remove(ABT_pool pool, ABT_unit unit)
+ 
+ /**
+  * @ingroup POOL
++ * @brief   Apply a print function to every unit in a pool using a user-defined
++ *          function.
++ *
++ * This function applies \c print_fn to every unit in \c pool. As the name of
++ * the argument implies, \c print_fn may not have any side effect;
++ * \c ABT_pool_print_all() is for the purpose of debugging and profiling.  For
++ * example, changing the state of \c ABT_unit in \c print_fn is forbidden.
++ *
++ * When \c pool does not support the print-all feature, ABT_ERR_POOL is
++ * returned.
++ *
++ * @param[in] pool     handle to the pool
++ * @param[in] arg      argument passed to \c print_fn
++ * @param[in] print_fn user-defined print function
++ * @return Error code
++ * @retval ABT_SUCCESS on success
++ */
++int ABT_pool_print_all(ABT_pool pool, void *arg,
++                       void (*print_fn)(void *, ABT_unit)) {
++    int abt_errno = ABT_SUCCESS;
++    ABTI_pool *p_pool = ABTI_pool_get_ptr(pool);
++    ABTI_CHECK_NULL_POOL_PTR(p_pool);
++    if (!p_pool->p_print_all) {
++        abt_errno = ABT_ERR_POOL;
++        goto fn_fail;
++    }
++
++    p_pool->p_print_all(pool, arg, print_fn);
++
++fn_exit:
++    return abt_errno;
++
++fn_fail:
++    HANDLE_ERROR_FUNC_WITH_CODE(abt_errno);
++    goto fn_exit;
++}
++
++/**
++ * @ingroup POOL
+  * @brief   Set the specific data of the target user-defined pool
+  *
+  * This function will be called by the user during the initialization of his
+-- 
+1.7.1
+
+
+From 09c3a4877303e68c841a0e36855922cbe083a30d Mon Sep 17 00:00:00 2001
+From: Shintaro Iwasaki <siwasaki@anl.gov>
+Date: Tue, 7 May 2019 08:45:21 -0500
+Subject: [PATCH 2/9] fixup: whitespace
+
+Signed-off-by: Bruno Faccini <bruno.faccini@intel.com>
+Signed-off-by: Pavan Balaji <balaji@anl.gov>
+---
+ src/include/abt.h.in |   14 +++++++-------
+ 1 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/src/include/abt.h.in b/src/include/abt.h.in
+index 61505cf..7e2a6e5 100644
+--- a/src/include/abt.h.in
++++ b/src/include/abt.h.in
+@@ -334,14 +334,14 @@ typedef struct {
+     ABT_unit_free_fn               u_free;
+ 
+     /* Functions to manage the pool */
+-    ABT_pool_init_fn     p_init;
+-    ABT_pool_get_size_fn p_get_size;
+-    ABT_pool_push_fn     p_push;
+-    ABT_pool_pop_fn      p_pop;
++    ABT_pool_init_fn          p_init;
++    ABT_pool_get_size_fn      p_get_size;
++    ABT_pool_push_fn          p_push;
++    ABT_pool_pop_fn           p_pop;
+     ABT_pool_pop_timedwait_fn p_pop_timedwait;
+-    ABT_pool_remove_fn   p_remove;
+-    ABT_pool_free_fn     p_free;
+-    ABT_pool_print_all_fn p_print_all;
++    ABT_pool_remove_fn        p_remove;
++    ABT_pool_free_fn          p_free;
++    ABT_pool_print_all_fn     p_print_all;
+ } ABT_pool_def;
+ 
+ 
+-- 
+1.7.1
+
+
+From d2aab15a4254b12848fd47ca4b679c1d08cf7901 Mon Sep 17 00:00:00 2001
+From: Shintaro Iwasaki <siwasaki@anl.gov>
+Date: Tue, 7 May 2019 08:45:33 -0500
+Subject: [PATCH 3/9] info: add a stack dump function.
+
+This patch adds ABT_info_print_thread_stack, which dumps the stack information of
+ULT. The current implementation prints the raw stack data.
+
+Signed-off-by: Bruno Faccini <bruno.faccini@intel.com>
+Signed-off-by: Pavan Balaji <balaji@anl.gov>
+---
+ src/include/abt.h.in |    1 +
+ src/include/abti.h   |    1 +
+ src/info.c           |   27 +++++++++++++++++++++++++++
+ src/thread.c         |   49 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 78 insertions(+), 0 deletions(-)
+
+diff --git a/src/include/abt.h.in b/src/include/abt.h.in
+index 7e2a6e5..e7aabe3 100644
+--- a/src/include/abt.h.in
++++ b/src/include/abt.h.in
+@@ -633,6 +633,7 @@ int ABT_info_print_pool(FILE* fp, ABT_pool pool) ABT_API_PUBLIC;
+ int ABT_info_print_thread(FILE* fp, ABT_thread thread) ABT_API_PUBLIC;
+ int ABT_info_print_thread_attr(FILE* fp, ABT_thread_attr attr) ABT_API_PUBLIC;
+ int ABT_info_print_task(FILE* fp, ABT_task task) ABT_API_PUBLIC;
++int ABT_info_print_thread_stack(FILE *fp, ABT_thread thread) ABT_API_PUBLIC;
+ 
+ #if defined(__cplusplus)
+ }
+diff --git a/src/include/abti.h b/src/include/abti.h
+index 2aab50e..e492840 100644
+--- a/src/include/abti.h
++++ b/src/include/abti.h
+@@ -567,6 +567,7 @@ int   ABTI_thread_set_blocked(ABTI_thread *p_thread);
+ void  ABTI_thread_suspend(ABTI_thread *p_thread);
+ int   ABTI_thread_set_ready(ABTI_thread *p_thread);
+ void  ABTI_thread_print(ABTI_thread *p_thread, FILE *p_os, int indent);
++int   ABTI_thread_print_stack(ABTI_thread *p_thread, FILE *p_os);
+ #ifndef ABT_CONFIG_DISABLE_MIGRATION
+ void  ABTI_thread_add_req_arg(ABTI_thread *p_thread, uint32_t req, void *arg);
+ void *ABTI_thread_extract_req_arg(ABTI_thread *p_thread, uint32_t req);
+diff --git a/src/info.c b/src/info.c
+index be2a6ba..f1143aa 100644
+--- a/src/info.c
++++ b/src/info.c
+@@ -332,3 +332,30 @@ int ABT_info_print_task(FILE* fp, ABT_task task)
+     goto fn_exit;
+ }
+ 
++/**
++ * @ingroup INFO
++ * @brief   Dump the stack of the target thread to the output stream.
++ *
++ * \c ABT_info_print_thread_stack() dumps the call stack of \c thread
++ * to the given output stream \c fp.
++ *
++ * @param[in] fp      output stream
++ * @param[in] thread  handle to the target thread
++ * @return Error code
++ * @retval ABT_SUCCESS on success
++ */
++int ABT_info_print_thread_stack(FILE *fp, ABT_thread thread)
++{
++    int abt_errno = ABT_SUCCESS;
++    ABTI_thread *p_thread = ABTI_thread_get_ptr(thread);
++    ABTI_CHECK_NULL_THREAD_PTR(p_thread);
++
++    abt_errno = ABTI_thread_print_stack(p_thread, fp);
++
++  fn_exit:
++    return abt_errno;
++
++  fn_fail:
++    HANDLE_ERROR_FUNC_WITH_CODE(abt_errno);
++    goto fn_exit;
++}
+diff --git a/src/thread.c b/src/thread.c
+index 06a5d8d..756f9fb 100644
+--- a/src/thread.c
++++ b/src/thread.c
+@@ -2109,6 +2109,55 @@ void ABTI_thread_print(ABTI_thread *p_thread, FILE *p_os, int indent)
+     ABTU_free(prefix);
+ }
+ 
++int ABTI_thread_print_stack(ABTI_thread *p_thread, FILE *p_os)
++{
++    void *p_stack = p_thread->attr.p_stack;
++    size_t i, j, stacksize = p_thread->attr.stacksize;
++    if (stacksize == 0 || p_stack == NULL) {
++        /* Some threads do not have p_stack (e.g., the main thread) */
++        return ABT_ERR_THREAD;
++    }
++
++    const size_t value_width = 8;
++    const int num_bytes = 32;
++    char *buffer = (char *)alloca(num_bytes);
++    for (i = 0; i < stacksize; i += num_bytes) {
++        if (stacksize >= i + num_bytes) {
++            memcpy(buffer, &((uint8_t *)p_stack)[i], num_bytes);
++        } else {
++            memset(buffer, 0, num_bytes);
++            memcpy(buffer, &((uint8_t *)p_stack)[i], stacksize - i);
++        }
++        /* Print the stack address */
++        if (sizeof(void *) == 8) {
++            fprintf(p_os, "%016" PRIxPTR ":",
++                    (uintptr_t)(&((uint8_t *)p_stack)[i]));
++        } else {
++            fprintf(p_os, "%08" PRIxPTR ":",
++                    (uintptr_t)(&((uint8_t *)p_stack)[i]));
++        }
++        /* Print the raw stack data */
++        for (j = 0; j < num_bytes / value_width; j++) {
++            if (value_width == 8) {
++                uint64_t val = ((uint64_t *)buffer)[j];
++                fprintf(p_os, " %016" PRIx64, val);
++            } else if (value_width == 4) {
++                uint32_t val = ((uint32_t *)buffer)[j];
++                fprintf(p_os, " %08" PRIx32, val);
++            } else if (value_width == 2) {
++                uint16_t val = ((uint16_t *)buffer)[j];
++                fprintf(p_os, " %04" PRIx16, val);
++            } else {
++                uint8_t val = ((uint8_t *)buffer)[j];
++                fprintf(p_os, " %02" PRIx8, val);
++            }
++            if (j == (num_bytes / value_width) - 1)
++                fprintf(p_os, "\n");
++        }
++    }
++    return ABT_SUCCESS;
++}
++
+ #ifndef ABT_CONFIG_DISABLE_MIGRATION
+ void ABTI_thread_add_req_arg(ABTI_thread *p_thread, uint32_t req, void *arg)
+ {
+-- 
+1.7.1
+
+
+From ae66141c3bd3bd13f1a7185fc1c02239b9406164 Mon Sep 17 00:00:00 2001
+From: Shintaro Iwasaki <siwasaki@anl.gov>
+Date: Tue, 7 May 2019 08:45:52 -0500
+Subject: [PATCH 4/9] info: add ABT_info_print_thread_stacks_in_pool.
+
+Add a debug function ABT_info_print_thread_stacks_in_pool, which dumps stacks
+and context information of all threads in a given pool. This function is useful
+to debug a program.
+
+Signed-off-by: Bruno Faccini <bruno.faccini@intel.com>
+Signed-off-by: Pavan Balaji <balaji@anl.gov>
+---
+ src/arch/abtd_thread.c      |   34 +++++++++++++++++++
+ src/include/abt.h.in        |    1 +
+ src/include/abtd_ucontext.h |    2 +
+ src/info.c                  |   77 +++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 114 insertions(+), 0 deletions(-)
+
+diff --git a/src/arch/abtd_thread.c b/src/arch/abtd_thread.c
+index 55f7a18..77878f0 100644
+--- a/src/arch/abtd_thread.c
++++ b/src/arch/abtd_thread.c
+@@ -228,3 +228,37 @@ void ABTD_thread_cancel(ABTI_thread *p_thread)
+ #endif
+ }
+ 
++static inline
++void print_bytes(size_t size, void *p_val, FILE *p_os) {
++    size_t i;
++    for (i = 0; i < size; i++) {
++        uint8_t val = ((uint8_t *)p_val)[i];
++        fprintf(p_os, "%02" PRIx8, val);
++    }
++}
++
++void ABTD_thread_print_context(ABTI_thread *p_thread, FILE *p_os, int indent)
++{
++    char *prefix = ABTU_get_indent_str(indent);
++    ABTD_thread_context *p_ctx = &p_thread->ctx;
++#if defined(ABT_CONFIG_USE_FCONTEXT)
++    fprintf(p_os, "%sfctx     : %p\n", prefix, p_ctx->fctx);
++    fprintf(p_os, "%sf_thread : %p\n", prefix, p_ctx->f_thread);
++    fprintf(p_os, "%sp_arg    : %p\n", prefix, p_ctx->p_arg);
++    fprintf(p_os, "%sp_link   : %p\n", prefix, p_ctx->p_link);
++#else
++    /* TODO: print information in more detail. */
++    fprintf(p_os, "%suc_link     : %p\n", prefix, p_ctx->uc_link);
++    fprintf(p_os, "%suc_sigmask  : ", prefix);
++    print_bytes(sizeof(sigset_t), &p_ctx->uc_sigmask, p_os);
++    fprintf(p_os, "\n");
++    fprintf(p_os, "%suc_stack    : ", prefix);
++    print_bytes(sizeof(stack_t), &p_ctx->uc_stack, p_os);
++    fprintf(p_os, "\n");
++    fprintf(p_os, "%suc_mcontext : ", prefix);
++    print_bytes(sizeof(mcontext_t), &p_ctx->uc_mcontext, p_os);
++    fprintf(p_os, "\n");
++#endif
++    fflush(p_os);
++    ABTU_free(prefix);
++}
+diff --git a/src/include/abt.h.in b/src/include/abt.h.in
+index e7aabe3..b63b9ff 100644
+--- a/src/include/abt.h.in
++++ b/src/include/abt.h.in
+@@ -634,6 +634,7 @@ int ABT_info_print_thread(FILE* fp, ABT_thread thread) ABT_API_PUBLIC;
+ int ABT_info_print_thread_attr(FILE* fp, ABT_thread_attr attr) ABT_API_PUBLIC;
+ int ABT_info_print_task(FILE* fp, ABT_task task) ABT_API_PUBLIC;
+ int ABT_info_print_thread_stack(FILE *fp, ABT_thread thread) ABT_API_PUBLIC;
++int ABT_info_print_thread_stacks_in_pool(FILE *fp, ABT_pool pool) ABT_API_PUBLIC;
+ 
+ #if defined(__cplusplus)
+ }
+diff --git a/src/include/abtd_ucontext.h b/src/include/abtd_ucontext.h
+index 1e06490..faee467 100644
+--- a/src/include/abtd_ucontext.h
++++ b/src/include/abtd_ucontext.h
+@@ -25,4 +25,6 @@ typedef ucontext_t  abt_ucontext_t;
+ 
+ #endif
+ 
++void ABTD_thread_print_context(ABTI_thread *p_thread, FILE *p_os, int indent);
++
+ #endif /* ABTD_UCONTEXT_H_INCLUDED */
+diff --git a/src/info.c b/src/info.c
+index f1143aa..becac65 100644
+--- a/src/info.c
++++ b/src/info.c
+@@ -359,3 +359,80 @@ int ABT_info_print_thread_stack(FILE *fp, ABT_thread thread)
+     HANDLE_ERROR_FUNC_WITH_CODE(abt_errno);
+     goto fn_exit;
+ }
++
++struct ABTI_info_print_unit_arg_t {
++    FILE *fp;
++    ABT_pool pool;
++};
++
++static void ABTI_info_print_unit(void *arg, ABT_unit unit)
++{
++    /* This function may not have any side effect on unit because it is passed
++     * to p_print_all. */
++    struct ABTI_info_print_unit_arg_t *p_arg;
++    p_arg = (struct ABTI_info_print_unit_arg_t *)arg;
++    FILE *fp = p_arg->fp;
++    ABT_pool pool = p_arg->pool;
++    ABTI_pool *p_pool = ABTI_pool_get_ptr(pool);
++    ABT_unit_type type = p_pool->u_get_type(unit);
++
++    if (type == ABT_UNIT_TYPE_THREAD) {
++        fprintf(fp, "=== ULT (%p) ===\n", (void *)unit);
++        ABT_thread thread = p_pool->u_get_thread(unit);
++        ABTI_thread *p_thread = ABTI_thread_get_ptr(thread);
++        ABT_thread_id thread_id = ABTI_thread_get_id(p_thread);
++        fprintf(fp, "id        : %" PRIu64 "\n"
++                    "ctx       : %p\n",
++                    (uint64_t)thread_id,
++                    &p_thread->ctx);
++        ABTD_thread_print_context(p_thread, fp, 2);
++        fprintf(fp, "stack     : %p\n"
++                    "stacksize : %" PRIu64 "\n",
++                    p_thread->attr.p_stack,
++                    (uint64_t)p_thread->attr.stacksize);
++        int abt_errno = ABT_info_print_thread_stack(fp, thread);
++        if (abt_errno != ABT_SUCCESS)
++            fprintf(fp, "Failed to print stack.\n");
++    } else if (type == ABT_UNIT_TYPE_TASK) {
++        fprintf(fp, "=== tasklet (%p) ===\n", (void *)unit);
++    } else {
++        fprintf(fp, "=== unknown (%p) ===\n", (void *)unit);
++    }
++}
++
++/**
++ * @ingroup INFO
++ * @brief   Dump stack information of all the threads in the target pool.
++ *
++ * \c ABT_info_print_thread_stacks_in_pool() dumps call stacks of all threads
++ * stored in \c pool.  This function returns \c ABT_ERR_POOL if \c pool does not
++ * support \c p_print_all.
++ *
++ * @param[in] fp    output stream
++ * @param[in] pool  handle to the target pool
++ * @return Error code
++ * @retval ABT_SUCCESS on success
++ */
++int ABT_info_print_thread_stacks_in_pool(FILE *fp, ABT_pool pool)
++{
++    int abt_errno = ABT_SUCCESS;
++    ABTI_pool *p_pool = ABTI_pool_get_ptr(pool);
++    ABTI_CHECK_NULL_POOL_PTR(p_pool);
++
++    if (!p_pool->p_print_all) {
++        abt_errno = ABT_ERR_POOL;
++        goto fn_fail;
++    }
++    fprintf(fp, "== pool (%p) ==\n", p_pool);
++    struct ABTI_info_print_unit_arg_t arg;
++    arg.fp = fp;
++    arg.pool = pool;
++    p_pool->p_print_all(pool, &arg, ABTI_info_print_unit);
++
++  fn_exit:
++    return abt_errno;
++
++  fn_fail:
++    HANDLE_ERROR_FUNC_WITH_CODE(abt_errno);
++    goto fn_exit;
++}
+-- 
+1.7.1
+
+
+From 5be707f7ed215622c600ac00babb9db76414dff6 Mon Sep 17 00:00:00 2001
+From: Shintaro Iwasaki <siwasaki@anl.gov>
+Date: Tue, 7 May 2019 09:24:14 -0500
+Subject: [PATCH 5/9] info: add ABT_info_trigger_print_all_thread_stacks.
+
+This patch implements ABT_info_trigger_print_all_thread_stacks(), a
+debugging-purpose signal-safe function that dumps stacks of all ULTs in the
+pools. This function immediately returns after setting a flag; stacks are
+printed later.  This function does not have a harmful side effect if timeout is
+set to a negative value and thus the program can resume after running this
+function.
+
+This function has several limitations. Check the description for details.
+
+Signed-off-by: Bruno Faccini <bruno.faccini@intel.com>
+Signed-off-by: Pavan Balaji <balaji@anl.gov>
+---
+ src/include/abt.h.in |    3 +
+ src/include/abti.h   |    3 +
+ src/info.c           |  183 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/stream.c         |    2 +
+ 4 files changed, 191 insertions(+), 0 deletions(-)
+
+diff --git a/src/include/abt.h.in b/src/include/abt.h.in
+index b63b9ff..f6ad2ba 100644
+--- a/src/include/abt.h.in
++++ b/src/include/abt.h.in
+@@ -635,6 +635,9 @@ int ABT_info_print_thread_attr(FILE* fp, ABT_thread_attr attr) ABT_API_PUBLIC;
+ int ABT_info_print_task(FILE* fp, ABT_task task) ABT_API_PUBLIC;
+ int ABT_info_print_thread_stack(FILE *fp, ABT_thread thread) ABT_API_PUBLIC;
+ int ABT_info_print_thread_stacks_in_pool(FILE *fp, ABT_pool pool) ABT_API_PUBLIC;
++int ABT_info_trigger_print_all_thread_stacks(FILE *fp, double timeout,
++                                             void (*cb_func)(ABT_bool, void *),
++                                             void *arg) ABT_API_PUBLIC;
+ 
+ #if defined(__cplusplus)
+ }
+diff --git a/src/include/abti.h b/src/include/abti.h
+index e492840..e62cc87 100644
+--- a/src/include/abti.h
++++ b/src/include/abti.h
+@@ -644,6 +644,9 @@ void ABTI_event_inc_unit_cnt(ABTI_xstream *p_xstream, ABT_unit_type type);
+ void ABTI_event_publish_info(void);
+ #endif
+ 
++/* Information */
++void ABTI_info_check_print_all_thread_stacks(void);
++
+ #include "abti_log.h"
+ #include "abti_event.h"
+ #include "abti_local.h"
+diff --git a/src/info.c b/src/info.c
+index becac65..73015e4 100644
+--- a/src/info.c
++++ b/src/info.c
+@@ -436,3 +436,186 @@ int ABT_info_print_thread_stacks_in_pool(FILE *fp, ABT_pool pool)
+     HANDLE_ERROR_FUNC_WITH_CODE(abt_errno);
+     goto fn_exit;
+ }
++
++struct ABTI_info_pool_set_t {
++    ABT_pool *pools;
++    size_t num;
++    size_t len;
++};
++
++static inline
++void ABTI_info_initialize_pool_set(struct ABTI_info_pool_set_t *p_set)
++{
++    size_t default_len = 16;
++    p_set->pools = (ABT_pool *)ABTU_malloc(sizeof(ABT_pool) * default_len);
++    p_set->num = 0;
++    p_set->len = default_len;
++}
++
++static inline
++void ABTI_info_finalize_pool_set(struct ABTI_info_pool_set_t *p_set)
++{
++    ABTU_free(p_set->pools);
++}
++
++static inline
++void ABTI_info_add_pool_set(ABT_pool pool, struct ABTI_info_pool_set_t *p_set)
++{
++    size_t i;
++    for (i = 0; i < p_set->num; i++) {
++        if (p_set->pools[i] == pool)
++            return;
++    }
++    /* Add pool to p_set. */
++    if (p_set->num == p_set->len) {
++        size_t new_len = p_set->len * 2;
++        p_set->pools = (ABT_pool *)ABTU_realloc(p_set->pools,
++                                                sizeof(ABT_pool) * new_len);
++        p_set->len = new_len;
++    }
++    p_set->pools[p_set->num++] = pool;
++}
++
++#define PRINT_STACK_FLAG_UNSET      0
++#define PRINT_STACK_FLAG_INITIALIZE 1
++#define PRINT_STACK_FLAG_WAIT       2
++#define PRINT_STACK_FLAG_FINALIZE   3
++
++static uint32_t print_stack_flag = PRINT_STACK_FLAG_UNSET;
++static FILE *print_stack_fp = NULL;
++static double print_stack_timeout = 0.0;
++static void (*print_cb_func)(ABT_bool, void *) = NULL;
++static void *print_arg = NULL;
++static uint32_t print_stack_barrier = 0;
++
++/**
++ * @ingroup INFO
++ * @brief   Dump stacks of threads in pools existing in Argobots.
++ *
++ * \c ABT_info_trigger_print_all_thread_stacks() tries to dump call stacks of
++ * all threads stored in pools in the Argobots runtime. This function itself does
++ * not print stacks; it immediately returns after updating a flag. Stacks are
++ * printed when all execution streams stop in \c ABT_xstream_check_events().
++ *
++ * If some execution streams do not stop within a certain time period, one of
++ * the stopped execution streams starts to print stack information. In this
++ * case, this function might not work correctly and at worst causes a crash.
++ * This function does not work at all if no execution stream executes
++ * \c ABT_xstream_check_events().
++ *
++ * \c cb_func is called after completing stack dump unless it is NULL. The first
++ * argument is set to \c ABT_TRUE if not all the execution streams stop within
++ * \c timeout. Otherwise, \c ABT_FALSE is set. The second argument is user-defined
++ * data \c arg. Since \c cb_func is not called by a thread or an execution
++ * stream, \c ABT_self_...() functions in \c cb_func return undefined values.
++ * Neither signal-safety nor thread-safety is required for \c cb_func.
++ *
++ * In Argobots, \c ABT_info_trigger_print_all_thread_stacks is exceptionally
++ * signal-safe; it can be safely called in a signal handler.
++ *
++ * The following threads are not captured in this function:
++ * - threads that are suspending (e.g., by \c ABT_thread_suspend())
++ * - threads in pools that are not associated with main schedulers
++ *
++ * @param[in] fp       output stream
++ * @param[in] timeout  timeout (second). Disabled if the value is negative.
++ * @param[in] cb_func  call-back function
++ * @param[in] arg      an argument passed to \c cb_func
++ * @return Error code
++ * @retval ABT_SUCCESS on success
++ */
++int ABT_info_trigger_print_all_thread_stacks(FILE *fp, double timeout,
++                                             void (*cb_func)(ABT_bool, void *),
++                                             void *arg)
++{
++    /* This function is signal-safe, so it may not call other functions unless
++     * you really know what the called functions do. */
++    if (ABTD_atomic_load_uint32(&print_stack_flag) == PRINT_STACK_FLAG_UNSET) {
++        if (ABTD_atomic_bool_cas_strong_uint32(&print_stack_flag,
++                                               PRINT_STACK_FLAG_UNSET,
++                                               PRINT_STACK_FLAG_INITIALIZE)) {
++            /* Save fp and timeout. */
++            print_stack_fp = fp;
++            print_stack_timeout = timeout;
++            print_cb_func = cb_func;
++            print_arg = arg;
++            /* Here print_stack_barrier must be 0. */
++            ABTI_ASSERT(ABTD_atomic_load_uint32(&print_stack_barrier) == 0);
++            ABTD_atomic_store_uint32(&print_stack_flag, PRINT_STACK_FLAG_WAIT);
++        }
++    }
++    return ABT_SUCCESS;
++}
++
++void ABTI_info_check_print_all_thread_stacks(void)
++{
++    if (ABTD_atomic_load_uint32(&print_stack_flag) != PRINT_STACK_FLAG_WAIT)
++        return;
++
++    /* Wait for the other execution streams using a barrier mechanism. */
++    uint32_t self_value = ABTD_atomic_fetch_add_uint32(&print_stack_barrier, 1);
++    if (self_value == 0) {
++        /* This ES becomes a master. */
++        double start_time = ABT_get_wtime();
++        ABT_bool force_print = ABT_FALSE;
++        while (ABTD_atomic_load_uint32(&print_stack_barrier)
++               < ABTD_atomic_load_int32(&gp_ABTI_global->num_xstreams)) {
++            ABTD_atomic_pause();
++            if (print_stack_timeout >= 0.0
++                && (ABT_get_wtime() - start_time) >= print_stack_timeout) {
++                force_print = ABT_TRUE;
++                break;
++            }
++        }
++        /* All the available ESs are (supposed to be) stopped. We *assume* that
++         * no ES is calling and will call Argobots functions except this
++         * function while printing stack information. */
++        int i, j;
++        struct ABTI_info_pool_set_t pool_set;
++        ABTI_info_initialize_pool_set(&pool_set);
++        FILE *fp = print_stack_fp;
++        if (force_print) {
++            fprintf(fp, "ABT_info_trigger_print_all_thread_stacks: "
++                        "timeout (only %d ESs stop)\n",
++                        (int)print_stack_barrier);
++        }
++        for (i = 0; i < gp_ABTI_global->num_xstreams; i++) {
++            ABTI_xstream *p_xstream = gp_ABTI_global->p_xstreams[i];
++            ABTI_sched *p_main_sched = p_xstream->p_main_sched;
++            fprintf(fp, "= xstream[%d] (%p) =\n", i, p_xstream);
++            fprintf(fp, "main_sched : %p\n", p_main_sched);
++            if (!p_main_sched)
++                continue;
++            for (j = 0; j < p_main_sched->num_pools; j++) {
++                ABT_pool pool = p_main_sched->pools[j];
++                ABTI_ASSERT(pool != ABT_POOL_NULL);
++                fprintf(fp, "  pools[%d] : %p\n", j, pool);
++                ABTI_info_add_pool_set(pool, &pool_set);
++            }
++        }
++        for (i = 0; i < pool_set.num; i++) {
++            ABT_pool pool = pool_set.pools[i];
++            int abt_errno = ABT_info_print_thread_stacks_in_pool(fp, pool);
++            if (abt_errno != ABT_SUCCESS)
++                fprintf(fp, "  Failed to print (errno = %d).\n", abt_errno);
++        }
++        if (print_cb_func)
++            print_cb_func(force_print, print_arg);
++        /* Update print_stack_flag to 3. */
++        ABTD_atomic_store_uint32(&print_stack_flag, PRINT_STACK_FLAG_FINALIZE);
++    } else {
++        /* Wait for the master's work. */
++        while (ABTD_atomic_load_uint32(&print_stack_flag)
++               != PRINT_STACK_FLAG_FINALIZE)
++            ABTD_atomic_pause();
++    }
++    ABTI_ASSERT(ABTD_atomic_load_uint32(&print_stack_flag)
++                == PRINT_STACK_FLAG_FINALIZE);
++
++    /* Decrement the barrier value. */
++    uint32_t dec_value = ABTD_atomic_fetch_sub_uint32(&print_stack_barrier, 1);
++    if (dec_value == 0) {
++        /* The last execution stream resets the flag. */
++        ABTD_atomic_store_uint32(&print_stack_flag, PRINT_STACK_FLAG_UNSET);
++    }
++}
+diff --git a/src/stream.c b/src/stream.c
+index ab4a536..75d7631 100644
+--- a/src/stream.c
++++ b/src/stream.c
+@@ -1141,6 +1141,8 @@ int ABTI_xstream_check_events(ABTI_xstream *p_xstream, ABT_sched sched)
+ {
+     int abt_errno = ABT_SUCCESS;
+ 
++    ABTI_info_check_print_all_thread_stacks();
++
+     if (p_xstream->request & ABTI_XSTREAM_REQ_JOIN) {
+         abt_errno = ABT_sched_finish(sched);
+         ABTI_CHECK_ERROR(abt_errno);
+-- 
+1.7.1
+
+
+From 4396b2144b26b459226e86dd6ce9df6eaf6e74f8 Mon Sep 17 00:00:00 2001
+From: Shintaro Iwasaki <siwasaki@anl.gov>
+Date: Tue, 7 May 2019 09:24:27 -0500
+Subject: [PATCH 6/9] test: add tests for ABT_info_trigger_print_all_thread_stacks
+
+This patch adds two tests: info_stackdump and info_stackdump2. Both test
+ABT_info_trigger_print_all_thread_stacks() invoked in a signal handler.
+
+In info_stackdump, all execution streams repeatedly yield. Since all the
+execution streams can stop in ABT_xstream_check_events(), the timeout mechanism
+is not needed and thus disabled (i.e., timeout is set to -1.0).
+
+On the other hand, some execution streams enter busy loops in info_stackdump2 so
+the timeout mechanism is enabled.
+
+Signed-off-by: Bruno Faccini <bruno.faccini@intel.com>
+Signed-off-by: Pavan Balaji <balaji@anl.gov>
+---
+ test/basic/Makefile.am       |    8 ++-
+ test/basic/info_stackdump.c  |  211 +++++++++++++++++++++++++++++++++++++++
+ test/basic/info_stackdump2.c |  226 ++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 446 insertions(+), 1 deletions(-)
+ create mode 100644 test/basic/info_stackdump.c
+ create mode 100644 test/basic/info_stackdump2.c
+
+ # benchmark
+ benchmark/init_finalize
+diff --git a/test/basic/Makefile.am b/test/basic/Makefile.am
+index e09e222..ab45b62 100644
+--- a/test/basic/Makefile.am
++++ b/test/basic/Makefile.am
+@@ -56,7 +56,9 @@ TESTS = \
+ 	ext_thread \
+ 	ext_thread2 \
+ 	timer \
+-	info_print
++	info_print \
++	info_stackdump \
++	info_stackdump2
+ 
+ XFAIL_TESTS =
+ if ABT_CONFIG_DISABLE_POOL_ACCESS_CHECK
+@@ -124,6 +126,8 @@ ext_thread_SOURCES = ext_thread.c
+ ext_thread2_SOURCES = ext_thread2.c
+ timer_SOURCES = timer.c
+ info_print_SOURCES = info_print.c
++info_stackdump_SOURCES = info_stackdump.c
++info_stackdump2_SOURCES = info_stackdump2.c
+ 
+ testing:
+ 	./init_finalize
+@@ -179,3 +183,5 @@ testing:
+ 	./ext_thread2
+ 	./timer
+ 	./info_print
++	./info_stackdump
++	./info_stackdump2
+diff --git a/test/basic/info_stackdump.c b/test/basic/info_stackdump.c
+new file mode 100644
+index 0000000..1a380af
+--- /dev/null
++++ b/test/basic/info_stackdump.c
+@@ -0,0 +1,211 @@
++/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
++/*
++ * See COPYRIGHT in top-level directory.
++ */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <signal.h>
++#include "abt.h"
++#include "abttest.h"
++
++#define DEFAULT_NUM_XSTREAMS    4
++#define DEFAULT_NUM_THREADS     4
++
++int g_go = 0;
++
++void callback_f(ABT_bool timeout, void *arg)
++{
++    assert(timeout == ABT_FALSE);
++    assert((intptr_t)arg == (intptr_t)1);
++    g_go = 1;
++    __sync_synchronize();
++}
++
++void signal_handler(int sig)
++{
++    /* timeout is negative, so the timeout mechanism is disabled; all execution
++     * streams must execute ABT_xstream_check_events() in the scheduler. */
++    ABT_info_trigger_print_all_thread_stacks(stdout, -1.0, callback_f,
++                                             (void *)((intptr_t)1));
++    signal(SIGUSR1, signal_handler);
++}
++
++typedef struct thread_arg {
++    int id;
++    int issue_signal;
++    int *dummy_ptr;
++    void *stack;
++} thread_arg_t;
++
++void thread_func(void *arg)
++{
++    int i;
++    int rank;
++    ABT_thread_id id;
++    ABT_thread self;
++    thread_arg_t *t_arg = (thread_arg_t *)arg;
++
++    ABT_xstream_self_rank(&rank);
++    ABT_thread_self(&self);
++    ABT_thread_get_id(self, &id);
++    t_arg->id = (int)id;
++
++    ATS_printf(1, "[U%d:E%d] START\n", t_arg->id, rank);
++
++    /* Write data into a stack */
++    t_arg->dummy_ptr = (int *)alloca(sizeof(int) * 128);
++    for (i = 0; i < 128; i += 2) {
++        t_arg->dummy_ptr[i + 0] = id;
++        t_arg->dummy_ptr[i + 1] = rank;
++    }
++
++    ATS_printf(1, "[U%d:E%d] END\n", t_arg->id, rank);
++
++    ABT_thread_yield();
++
++    if (t_arg->issue_signal) {
++        ATS_printf(1, "[U%d:E%d] Raise SIGUSR1\n", t_arg->id, rank);
++        raise(SIGUSR1);
++    }
++
++    while (g_go == 0) {
++        __sync_synchronize();
++        ABT_thread_yield();
++    }
++}
++
++int main(int argc, char *argv[])
++{
++    int i, j;
++    int ret;
++    int num_xstreams = DEFAULT_NUM_XSTREAMS;
++    int num_threads = DEFAULT_NUM_THREADS;
++
++    /* Set a signal handler */
++    signal(SIGUSR1, signal_handler);
++
++    /* Initialize */
++    ATS_read_args(argc, argv);
++    if (argc >= 2) {
++        num_xstreams = ATS_get_arg_val(ATS_ARG_N_ES);
++        num_threads = ATS_get_arg_val(ATS_ARG_N_ULT);
++    }
++    ATS_init(argc, argv, num_xstreams);
++
++    ATS_printf(2, "# of ESs : %d\n", num_xstreams);
++    ATS_printf(1, "# of ULTs: %d\n", num_threads);
++
++    ABT_xstream *xstreams;
++    ABT_thread **threads;
++    thread_arg_t **args;
++    xstreams = (ABT_xstream *)malloc(sizeof(ABT_xstream) * num_xstreams);
++    assert(xstreams != NULL);
++    threads = (ABT_thread **)malloc(sizeof(ABT_thread *) * num_xstreams);
++    assert(threads != NULL);
++    args = (thread_arg_t **)malloc(sizeof(thread_arg_t *) * num_xstreams);
++    assert(args != NULL);
++    for (i = 0; i < num_xstreams; i++) {
++        threads[i] = (ABT_thread *)malloc(sizeof(ABT_thread) * num_threads);
++        args[i] = (thread_arg_t *)malloc(sizeof(thread_arg_t) * num_threads);
++    }
++
++    /* Create execution streams */
++    ret = ABT_xstream_self(&xstreams[0]);
++    ATS_ERROR(ret, "ABT_xstream_self");
++    for (i = 1; i < num_xstreams; i++) {
++        ret = ABT_xstream_create(ABT_SCHED_NULL, &xstreams[i]);
++        ATS_ERROR(ret, "ABT_xstream_create");
++    }
++
++    /* Get the pools attached to an execution stream */
++    ABT_pool *pools;
++    pools = (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
++    for (i = 0; i < num_xstreams; i++) {
++        ret = ABT_xstream_get_main_pools(xstreams[i], 1, pools + i);
++        ATS_ERROR(ret, "ABT_xstream_get_main_pools");
++    }
++
++    /* Create ULTs */
++    for (i = 0; i < num_xstreams; i++) {
++        for (j = 0; j < num_threads; j++) {
++            int tid = i * num_threads + j + 1;
++            args[i][j].id = tid;
++            args[i][j].issue_signal = (i == num_xstreams / 2)
++                                      && (j == num_threads / 2);
++            args[i][j].dummy_ptr = NULL;
++            args[i][j].stack = NULL;
++            if (tid % 3 == 0) {
++                ret = ABT_thread_create(pools[i], thread_func,
++                                        (void *)&args[i][j],
++                                        ABT_THREAD_ATTR_NULL, &threads[i][j]);
++                ATS_ERROR(ret, "ABT_thread_create");
++            } else if (tid % 3 == 1) {
++                ABT_thread_attr attr;
++                ret = ABT_thread_attr_create(&attr);
++                ATS_ERROR(ret, "ABT_thread_attr_create");
++                ret = ABT_thread_attr_set_stacksize(attr, 32768);
++                ATS_ERROR(ret, "ABT_thread_attr_set_stacksize");
++                ret = ABT_thread_create(pools[i], thread_func,
++                                        (void *)&args[i][j],
++                                        attr, &threads[i][j]);
++                ATS_ERROR(ret, "ABT_thread_create");
++                ret = ABT_thread_attr_free(&attr);
++                ATS_ERROR(ret, "ABT_thread_attr_free");
++            } else {
++                const size_t stacksize = 32768;
++                args[i][j].stack = malloc(stacksize);
++                ABT_thread_attr attr;
++                ret = ABT_thread_attr_create(&attr);
++                ATS_ERROR(ret, "ABT_thread_attr_create");
++                ret = ABT_thread_attr_set_stack(attr, args[i][j].stack,
++                                                stacksize);
++                ATS_ERROR(ret, "ABT_thread_attr_set_stack");
++                ret = ABT_thread_create(pools[i], thread_func,
++                                        (void *)&args[i][j],
++                                        attr, &threads[i][j]);
++                ATS_ERROR(ret, "ABT_thread_create");
++                ret = ABT_thread_attr_free(&attr);
++                ATS_ERROR(ret, "ABT_thread_attr_free");
++            }
++        }
++    }
++
++    /* Join and free ULTs */
++    for (i = 0; i < num_xstreams; i++) {
++        for (j = 0; j < num_threads; j++) {
++            ret = ABT_thread_free(&threads[i][j]);
++            ATS_ERROR(ret, "ABT_thread_free");
++        }
++    }
++
++    /* Join Execution Streams */
++    for (i = 1; i < num_xstreams; i++) {
++        ret = ABT_xstream_join(xstreams[i]);
++        ATS_ERROR(ret, "ABT_xstream_join");
++    }
++
++    /* Free Execution Streams */
++    for (i = 1; i < num_xstreams; i++) {
++        ret = ABT_xstream_free(&xstreams[i]);
++        ATS_ERROR(ret, "ABT_xstream_free");
++    }
++
++    /* Finalize */
++    ret = ATS_finalize(0);
++
++    for (i = 0; i < num_xstreams; i++) {
++        for (j = 0; j < num_threads; j++) {
++            if (args[i][j].stack)
++                free(args[i][j].stack);
++        }
++        free(threads[i]);
++        free(args[i]);
++    }
++    free(threads);
++    free(args);
++    free(xstreams);
++    free(pools);
++
++    return ret;
++}
+diff --git a/test/basic/info_stackdump2.c b/test/basic/info_stackdump2.c
+new file mode 100644
+index 0000000..107b768
+--- /dev/null
++++ b/test/basic/info_stackdump2.c
+@@ -0,0 +1,226 @@
++/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
++/*
++ * See COPYRIGHT in top-level directory.
++ */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <signal.h>
++#include "abt.h"
++#include "abttest.h"
++
++#define DEFAULT_NUM_XSTREAMS    4
++#define DEFAULT_NUM_THREADS     8
++
++int g_counter = 0;
++int g_stop = 0;
++
++void callback_f(ABT_bool timeout, void *arg)
++{
++    assert(timeout == ABT_TRUE);
++    assert((intptr_t)arg == (intptr_t)1);
++    g_stop = 0;
++    __sync_synchronize();
++}
++
++void signal_handler(int sig)
++{
++    /* In this test, some execution streams busy-wait in thread_func, so
++     * timeout is set to a positive value so that this mechanism works even if
++     * some execution streams hang.  */
++    ABT_info_trigger_print_all_thread_stacks(stdout, 3.0, callback_f,
++                                             (void *)((intptr_t)1));
++    signal(SIGUSR1, signal_handler);
++}
++
++typedef struct thread_arg {
++    int id;
++    int issue_signal;
++    int stop;
++    int num_xstreams;
++    int *dummy_ptr;
++    void *stack;
++} thread_arg_t;
++
++void thread_func(void *arg)
++{
++    int i;
++    int rank;
++    ABT_thread_id id;
++    ABT_thread self;
++    thread_arg_t *t_arg = (thread_arg_t *)arg;
++
++    ABT_xstream_self_rank(&rank);
++    ABT_thread_self(&self);
++    ABT_thread_get_id(self, &id);
++    t_arg->id = (int)id;
++
++    ATS_printf(1, "[U%d:E%d] START\n", t_arg->id, rank);
++
++    /* Write data into a stack */
++    t_arg->dummy_ptr = (int *)alloca(sizeof(int) * 128);
++    for (i = 0; i < 128; i += 2) {
++        t_arg->dummy_ptr[i + 0] = id;
++        t_arg->dummy_ptr[i + 1] = rank;
++    }
++
++    ATS_printf(1, "[U%d:E%d] END\n", t_arg->id, rank);
++
++    ABT_thread_yield();
++
++    if (t_arg->issue_signal) {
++        ATS_printf(1, "[U%d:E%d] Raise SIGUSR1\n", t_arg->id, rank);
++        g_stop = 1;
++        while (g_counter < t_arg->num_xstreams - 2) {
++            /* ensure that all the non-master execution streams are waiting in
++             * the following busy loop. */
++            __sync_synchronize();
++        }
++        raise(SIGUSR1);
++    }
++
++    if (t_arg->stop) {
++        __sync_add_and_fetch(&g_counter, 1);
++        while (g_stop == 1) {
++            __sync_synchronize();
++        }
++    }
++}
++
++int main(int argc, char *argv[])
++{
++    int i, j;
++    int ret;
++    int num_xstreams = DEFAULT_NUM_XSTREAMS;
++    int num_threads = DEFAULT_NUM_THREADS;
++
++    /* Set a signal handler */
++    signal(SIGUSR1, signal_handler);
++
++    /* Initialize */
++    ATS_read_args(argc, argv);
++    if (argc >= 2) {
++        num_xstreams = ATS_get_arg_val(ATS_ARG_N_ES);
++        num_threads = ATS_get_arg_val(ATS_ARG_N_ULT);
++    }
++    ATS_init(argc, argv, num_xstreams);
++
++    ATS_printf(2, "# of ESs : %d\n", num_xstreams);
++    ATS_printf(1, "# of ULTs: %d\n", num_threads);
++
++    ABT_xstream *xstreams;
++    ABT_thread **threads;
++    thread_arg_t **args;
++    xstreams = (ABT_xstream *)malloc(sizeof(ABT_xstream) * num_xstreams);
++    assert(xstreams != NULL);
++    threads = (ABT_thread **)malloc(sizeof(ABT_thread *) * num_xstreams);
++    assert(threads != NULL);
++    args = (thread_arg_t **)malloc(sizeof(thread_arg_t *) * num_xstreams);
++    assert(args != NULL);
++    for (i = 0; i < num_xstreams; i++) {
++        threads[i] = (ABT_thread *)malloc(sizeof(ABT_thread) * num_threads);
++        args[i] = (thread_arg_t *)malloc(sizeof(thread_arg_t) * num_threads);
++    }
++
++    /* Create execution streams */
++    ret = ABT_xstream_self(&xstreams[0]);
++    ATS_ERROR(ret, "ABT_xstream_self");
++    for (i = 1; i < num_xstreams; i++) {
++        ret = ABT_xstream_create(ABT_SCHED_NULL, &xstreams[i]);
++        ATS_ERROR(ret, "ABT_xstream_create");
++    }
++
++    /* Get the pools attached to an execution stream */
++    ABT_pool *pools;
++    pools = (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
++    for (i = 0; i < num_xstreams; i++) {
++        ret = ABT_xstream_get_main_pools(xstreams[i], 1, pools + i);
++        ATS_ERROR(ret, "ABT_xstream_get_main_pools");
++    }
++
++    /* Create ULTs. */
++    /* i starts from 1 because one execution stream must be busy-scheduling. */
++    for (i = 1; i < num_xstreams; i++) {
++        for (j = 0; j < num_threads; j++) {
++            int tid = i * num_threads + j + 1;
++            args[i][j].id = tid;
++            args[i][j].issue_signal = (i == ((num_xstreams - 1) / 2) + 1)
++                                      && (j == num_threads / 2);
++            args[i][j].stop = (j == num_threads / 2);
++            args[i][j].num_xstreams = num_xstreams;
++            args[i][j].dummy_ptr = NULL;
++            args[i][j].stack = NULL;
++            if (tid % 3 == 0) {
++                ret = ABT_thread_create(pools[i], thread_func,
++                                        (void *)&args[i][j],
++                                        ABT_THREAD_ATTR_NULL, &threads[i][j]);
++                ATS_ERROR(ret, "ABT_thread_create");
++            } else if (tid % 3 == 1) {
++                ABT_thread_attr attr;
++                ret = ABT_thread_attr_create(&attr);
++                ATS_ERROR(ret, "ABT_thread_attr_create");
++                ret = ABT_thread_attr_set_stacksize(attr, 32768);
++                ATS_ERROR(ret, "ABT_thread_attr_set_stacksize");
++                ret = ABT_thread_create(pools[i], thread_func,
++                                        (void *)&args[i][j],
++                                        attr, &threads[i][j]);
++                ATS_ERROR(ret, "ABT_thread_create");
++                ret = ABT_thread_attr_free(&attr);
++                ATS_ERROR(ret, "ABT_thread_attr_free");
++            } else {
++                const size_t stacksize = 32768;
++                args[i][j].stack = malloc(stacksize);
++                ABT_thread_attr attr;
++                ret = ABT_thread_attr_create(&attr);
++                ATS_ERROR(ret, "ABT_thread_attr_create");
++                ret = ABT_thread_attr_set_stack(attr, args[i][j].stack,
++                                                stacksize);
++                ATS_ERROR(ret, "ABT_thread_attr_set_stack");
++                ret = ABT_thread_create(pools[i], thread_func,
++                                        (void *)&args[i][j],
++                                        attr, &threads[i][j]);
++                ATS_ERROR(ret, "ABT_thread_create");
++                ret = ABT_thread_attr_free(&attr);
++                ATS_ERROR(ret, "ABT_thread_attr_free");
++            }
++        }
++    }
++
++    /* Join and free ULTs */
++    for (i = 1; i < num_xstreams; i++) {
++        for (j = 0; j < num_threads; j++) {
++            ret = ABT_thread_free(&threads[i][j]);
++            ATS_ERROR(ret, "ABT_thread_free");
++        }
++    }
++
++    /* Join Execution Streams */
++    for (i = 1; i < num_xstreams; i++) {
++        ret = ABT_xstream_join(xstreams[i]);
++        ATS_ERROR(ret, "ABT_xstream_join");
++    }
++
++    /* Free Execution Streams */
++    for (i = 1; i < num_xstreams; i++) {
++        ret = ABT_xstream_free(&xstreams[i]);
++        ATS_ERROR(ret, "ABT_xstream_free");
++    }
++
++    /* Finalize */
++    ret = ATS_finalize(0);
++
++    for (i = 0; i < num_xstreams; i++) {
++        for (j = 0; j < num_threads; j++) {
++            if (args[i][j].stack)
++                free(args[i][j].stack);
++        }
++        free(threads[i]);
++        free(args[i]);
++    }
++    free(threads);
++    free(args);
++    free(xstreams);
++    free(pools);
++
++    return ret;
++}
+-- 
+1.7.1
+
+
+From af7ae4bc3b1ca0f3e2e02e871324dd1705c053e7 Mon Sep 17 00:00:00 2001
+From: Matthieu Dorier <mdorier@anl.gov>
+Date: Wed, 4 Sep 2019 08:33:43 -0500
+Subject: [PATCH 7/9] made possible to remove error messages from std output
+
+---
+ configure.ac             |   11 +++++++++++
+ src/include/abti_error.h |   11 +++++++++++
+ 2 files changed, 22 insertions(+), 0 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index be06847..f58d67c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -101,6 +101,7 @@ AC_ARG_ENABLE([debug],
+         all   - all of the above choices
+         most  - same as "all" but not print logs by default
+                 (set ABT_ENV_USE_LOG to 1 for logging)
++        err   - print abt_errno information on standard error
+         none  - no debugging, i.e., --disable-debug
+ ],,[enable_debug=none])
+ 
+@@ -301,18 +302,25 @@ for option in $enable_debug ; do
+         log)
+             debug_log=yes
+             debug_log_print=yes
++            debug_err=yes
+         ;;
+         all)
+             debug_flags=yes
+             debug_log=yes
+             debug_log_print=yes
++            debug_err=yes
+         ;;
+         most)
+             debug_flags=yes
+             debug_log=yes
+             debug_log_print=no
++            debug_err=yes
++        ;;
++        err)
++            debug_err=yes
+         ;;
+         no|none)
++            debug_err=no
+             debug_flags=no
+             debug_log=no
+         ;;
+@@ -338,6 +346,9 @@ AS_IF([test "x$debug_log" = "xyes"],
+ AS_IF([test "x$debug_log_print" = "xyes"],
+     [AC_DEFINE(ABT_CONFIG_USE_DEBUG_LOG_PRINT, 1,
+         [Define to enable printing debug log messages])])
++AS_IF([test "x$debug_err" = "xyes"],
++    [AC_DEFINE(ABT_CONFIG_PRINT_ABT_ERRNO, 1,
++        [Define to enable printing abt_errno upon abt call error])])
+ 
+ 
+ # --enable-fast: compiler optimization flags
+diff --git a/src/include/abti_error.h b/src/include/abti_error.h
+index f2e9cae..2af30d2 100644
+--- a/src/include/abti_error.h
++++ b/src/include/abti_error.h
+@@ -7,6 +7,7 @@
+ #define ABTI_ERROR_H_INCLUDED
+ 
+ #include <assert.h>
++#include <abt_config.h>
+ 
+ #ifndef ABT_CONFIG_DISABLE_ERROR_CHECK
+ #define ABTI_ASSERT(cond) assert(cond)
+@@ -270,6 +271,8 @@
+ #define ABTI_CHECK_NULL_TIMER_PTR(p)
+ #endif
+ 
++#ifdef ABT_CONFIG_PRINT_ABT_ERRNO
++
+ #define HANDLE_ERROR(msg) \
+     fprintf(stderr, "[%s:%d] %s\n", __FILE__, __LINE__, msg)
+     //fprintf(stderr, "[%s:%d] %s\n", __FILE__, __LINE__, msg); exit(-1)
+@@ -282,4 +285,12 @@
+     fprintf(stderr, "[%s:%d] %s: %d\n", __FILE__, __LINE__, __func__, n)
+     //fprintf(stderr, "[%s:%d] %s: %d\n", __FILE__, __LINE__, __func__, n); exit(-1)
+ 
++#else
++
++#define HANDLE_ERROR(msg)              do { } while (0)
++#define HANDLE_ERROR_WITH_CODE(msg,n)  do { } while (0)
++#define HANDLE_ERROR_FUNC_WITH_CODE(n) do { } while (0)
++
++#endif
++
+ #endif /* ABTI_ERROR_H_INCLUDED */
+-- 
+1.7.1
+
+
+From 8eec91806fa2ce28c5cf39b4319a2223ee93535e Mon Sep 17 00:00:00 2001
+From: Jeff Olivier <jeffrey.v.olivier@intel.com>
+Date: Wed, 18 Sep 2019 10:52:51 -0600
+Subject: [PATCH 8/9] Disable expensive valgrind specific tracking if valgrind isn't
+ running. This enables users of argobots to keep one build that
+ supports valgrind without losing significant performance.
+
+Signed-off-by: Jeff Olivier <jeffrey.v.olivier@intel.com>
+---
+ src/mem/valgrind.c |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/src/mem/valgrind.c b/src/mem/valgrind.c
+index 0839048..823106d 100644
+--- a/src/mem/valgrind.c
++++ b/src/mem/valgrind.c
+@@ -45,6 +45,9 @@ void ABTI_valgrind_register_stack(const void *p_stack, size_t size) {
+     if (p_stack == 0)
+         return;
+ 
++    if (!RUNNING_ON_VALGRIND)
++	    return;
++
+     const void *p_start = (char *)(p_stack);
+     const void *p_end   = (char *)(p_stack) + size;
+ 
+@@ -71,6 +74,9 @@ void ABTI_valgrind_unregister_stack(const void *p_stack) {
+     if (p_stack == 0)
+         return;
+ 
++    if (!RUNNING_ON_VALGRIND)
++	    return;
++
+     ABTI_valgrind_lock_acquire();
+     if (gp_valgrind_id_list_head->p_stack == p_stack) {
+         VALGRIND_STACK_DEREGISTER(gp_valgrind_id_list_head->valgrind_id);
+-- 
+1.7.1
+
+
+From 89507c1f8cfec4e918e8b9861e41b4e9cef71461 Mon Sep 17 00:00:00 2001
+From: Jeff Olivier <jeffrey.v.olivier@intel.com>
+Date: Wed, 18 Sep 2019 11:40:00 -0600
+Subject: [PATCH 9/9] Move the checks to the header file
+
+Signed-off-by: Jeff Olivier <jeffrey.v.olivier@intel.com>
+---
+ src/include/abti_valgrind.h |   17 +++++++++++++----
+ src/mem/valgrind.c          |    6 ------
+ 2 files changed, 13 insertions(+), 10 deletions(-)
+
+diff --git a/src/include/abti_valgrind.h b/src/include/abti_valgrind.h
+index f1b724d..f340cd4 100644
+--- a/src/include/abti_valgrind.h
++++ b/src/include/abti_valgrind.h
+@@ -13,10 +13,19 @@
+ 
+ void ABTI_valgrind_register_stack(const void *p_stack, size_t size);
+ void ABTI_valgrind_unregister_stack(const void *p_stack);
+-#define ABTI_VALGRIND_REGISTER_STACK(p_stack, size) \
+-            ABTI_valgrind_register_stack  (p_stack, size)
+-#define ABTI_VALGRIND_UNREGISTER_STACK(p_stack) \
+-            ABTI_valgrind_unregister_stack(p_stack)
++#define ABTI_VALGRIND_REGISTER_STACK(p_stack, size)         \
++        do {                                                \
++            if (!RUNNING_ON_VALGRIND)                       \
++                break;                                      \
++            ABTI_valgrind_register_stack  (p_stack, size);  \
++        } while (0)
++
++#define ABTI_VALGRIND_UNREGISTER_STACK(p_stack)         \
++        do {                                            \
++            if (!RUNNING_ON_VALGRIND)                   \
++                break;                                  \
++            ABTI_valgrind_unregister_stack(p_stack);    \
++        } while (0)
+ 
+ #else
+ 
+diff --git a/src/mem/valgrind.c b/src/mem/valgrind.c
+index 823106d..0839048 100644
+--- a/src/mem/valgrind.c
++++ b/src/mem/valgrind.c
+@@ -45,9 +45,6 @@ void ABTI_valgrind_register_stack(const void *p_stack, size_t size) {
+     if (p_stack == 0)
+         return;
+ 
+-    if (!RUNNING_ON_VALGRIND)
+-	    return;
+-
+     const void *p_start = (char *)(p_stack);
+     const void *p_end   = (char *)(p_stack) + size;
+ 
+@@ -74,9 +71,6 @@ void ABTI_valgrind_unregister_stack(const void *p_stack) {
+     if (p_stack == 0)
+         return;
+ 
+-    if (!RUNNING_ON_VALGRIND)
+-	    return;
+-
+     ABTI_valgrind_lock_acquire();
+     if (gp_valgrind_id_list_head->p_stack == p_stack) {
+         VALGRIND_STACK_DEREGISTER(gp_valgrind_id_list_head->valgrind_id);
+-- 
+1.7.1
+
