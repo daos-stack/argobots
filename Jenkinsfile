@@ -40,7 +40,4 @@
 // I.e. for testing library changes
 //@Library(value="pipeline-lib@your_branch") _
 
-// TODO: add ubuntu18.10
-packageBuildingPipeline(['name' : 'argobots',
-                        'distros' : ['centos7', 'sles12.3', 'leap42.3',
-                        'leap15', 'ubuntu18.04']])
+packageBuildingPipeline()
