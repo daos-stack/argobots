@@ -41,4 +41,4 @@
 //@Library(value="pipeline-lib@your_branch") _
 
 // Ubuntu needs some work
-packageBuildingPipelineDAOS(['distros' : ['centos7', 'leap15'])
+packageBuildingPipelineDAOS(['distros' : ['centos7', 'leap15']])
