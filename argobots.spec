@@ -1,14 +1,12 @@
 Name: argobots
-Version: 1.0rc1
-Release: 5%{?dist}
+Version: 1.0
+Release: 1%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
 Url: http://www.argobots.org/
 #Source: https://api.github.com/repos/pmodels/$(NAME)/tarball/31703b1
 Source: https://github.com/pmodels/%{name}/releases/download/v%{version}/%{name}-%{version}.tar.gz
-Patch1: %{name}-9d48af0840.patch
-Patch2: %{name}-9d48af0840...89507c1f8c.patch
 
 BuildRequires: pkgconfig
 
@@ -98,6 +96,9 @@ rm -f %{buildroot}%{_libdir}/*.la
 %{_includedir}/*
 
 %changelog
+* Mon Aug 17 2020 Brian J. Murrell <brian.murrell@intel.com> - 1.0-1
+- Update to 1.0 final
+
 * Mon Jun 22 2020 Brian J. Murrell <brian.murrell@intel.com> - 1.0rc-5
 - Update License:
 
