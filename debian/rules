@@ -13,6 +13,8 @@
 # package maintainers to append LDFLAGS
 #export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
 
+# configure with ULTs stack unwind support
+CONFIGURE_FLAGS += --enable-stack-unwind
 
 %:
 	dh $@

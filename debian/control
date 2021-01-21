@@ -2,7 +2,7 @@ Source: argobots
 Section: libs
 Priority: optional
 Maintainer: daos-stack <daos@daos.groups.io>
-Build-Depends: debhelper (>=10)
+Build-Depends: debhelper (>=10), libunwind-devel
 Standards-Version: 4.1.4
 Homepage: https://wiki.hpdd.intel.com/display/DC/DAOS+Community+Home
 Vcs-Git: https://github.com/pmodels/argobots.git

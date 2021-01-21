@@ -1,3 +1,11 @@
+argobots (1.1a1) unstable; urgency=medium
+  [ Bruno Faccini ]
+  * Update to 1.1a1
+  * add a patch to bring up 7fd1987 which enables libunwind support
+  * build with unwinding enabled
+
+ -- Bruno Faccini <bruno.faccini@intel.com>  Wed, 20 Jan 2021 17:53:08 +0000
+
 argobots (1.0-1) unstable; urgency=medium
   [ Brian J. Murrell ]
   * Update to 1.0 final
