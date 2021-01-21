@@ -102,7 +102,7 @@ rm -f %{buildroot}%{_libdir}/*.la
 %{_includedir}/*
 
 %changelog
-* Wed Jan 20 2020 B.Faccini <bruno.faccini@intel.com> - 1.1a1
+* Wed Jan 20 2021 B.Faccini <bruno.faccini@intel.com> - 1.1a1
 - upgrade to 1.1a1
 - add a patch to bring up 7fd1987 which enables libunwind support
 - build with unwinding enabledt
