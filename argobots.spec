@@ -1,5 +1,5 @@
 Name: argobots
-Version: 1.1a1
+Version: 1.1~a1
 Release: 1%{?dist}.g7fd1987
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
@@ -8,7 +8,7 @@ Url: http://www.argobots.org/
 #Source: https://api.github.com/repos/pmodels/$(NAME)/tarball/31703b1
 Source: https://github.com/pmodels/%{name}/releases/download/v%{version}/%{name}-%{version}.tar.gz
 # patch to gather all changes from v1.1a1 tag up to ULTs stack unwinding commit
-Patch0: from_v1.1a1_upto_7fd1987.patch
+Patch0: v1.1a1..7fd1987.patch
 
 BuildRequires: pkgconfig
 
@@ -58,7 +58,6 @@ Development files for the argobots library.
 
 %prep
 %autosetup -p1
-%patch0 -p1
 
 %build
 # need to force autogen.sh since we have patches that touch a Makefile.am
@@ -105,7 +104,7 @@ rm -f %{buildroot}%{_libdir}/*.la
 * Wed Jan 20 2021 B.Faccini <bruno.faccini@intel.com> - 1.1a1
 - upgrade to 1.1a1
 - add a patch to bring up 7fd1987 which enables libunwind support
-- build with unwinding enabledt
+- build with unwinding enabled
 
 * Mon Aug 17 2020 Brian J. Murrell <brian.murrell@intel.com> - 1.0-1
 - Update to 1.0 final
