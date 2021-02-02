@@ -40,7 +40,7 @@ UBUNTU_20_04_PR_REPOS    ?= $(shell git show -s --format=%B | sed -ne 's/^PR-rep
 
 COMMON_RPM_ARGS  := --define "_topdir $$PWD/_topdir" $(BUILD_DEFINES)
 SPEC             := $(shell if [ -f $(NAME)-$(DISTRO_BASE).spec ]; then echo $(NAME)-$(DISTRO_BASE).spec; else echo $(NAME).spec; fi)
-VERSION           = $(eval VERSION := $(shell rpm $(COMMON_RPM_ARGS) --specfile --qf '%{version}\n' $(SPEC) | sed -n '1p'))$(VERSION)
+VERSION           = $(eval VERSION := $(shell rpm $(COMMON_RPM_ARGS) --specfile --qf '%{version}\n' $(SPEC) | sed -n -e 's/~//g' -e '1p'))$(VERSION)
 DEB_RVERS        := $(subst $(DOT),\$(DOT),$(VERSION))
 DEB_BVERS        := $(basename $(subst ~rc,$(DOT)rc,$(VERSION)))
 RELEASE           = $(eval RELEASE := $(shell rpm $(COMMON_RPM_ARGS) --specfile --qf '%{release}\n' $(SPEC) | sed -n '$(SED_EXPR)'))$(RELEASE)
@@ -131,7 +131,7 @@ _topdir/SOURCES/%: % | _topdir/SOURCES/
 # At least one spec file, SLURM (sles), has a different version for the
 # download file than the version in the spec file.
 ifeq ($(DL_VERSION),)
-DL_VERSION = $(subst ~,,$(VERSION))
+DL_VERSION = $(VERSION)
 endif
 ifeq ($(DL_NAME),)
 DL_NAME = $(NAME)
