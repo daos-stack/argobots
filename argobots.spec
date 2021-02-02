@@ -4,8 +4,8 @@ Name: argobots
 %global minor 1
 %global prerelease a1
 %global tag %{major}.%{minor}%{prerelease}
-Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
 
+Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
 Release: 1.g7fd1987%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
@@ -63,7 +63,7 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 Development files for the argobots library.
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n %{name}-%{tag}
 
 %build
 # need to force autogen.sh since we have patches that touch a Makefile.am

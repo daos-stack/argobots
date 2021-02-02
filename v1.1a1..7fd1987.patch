@@ -5988,29 +5988,6 @@ index 3678385..0000000
 -        return ABT_FALSE;
 -    }
 -}
-diff --git a/test/.gitignore b/test/.gitignore
-index 00c8d96..d0d831c 100644
---- a/test/.gitignore
-+++ b/test/.gitignore
-@@ -10,6 +10,7 @@ basic/thread_create2
- basic/thread_create_on_xstream
- basic/thread_revive
- basic/thread_attr
-+basic/thread_attr2
- basic/thread_yield
- basic/thread_yield_to
- basic/thread_self_suspend_resume
-@@ -57,8 +58,10 @@ basic/ext_thread
- basic/ext_thread2
- basic/timer
- basic/info_print
-+basic/info_print_stack
- basic/info_stackdump
- basic/info_stackdump2
-+basic/error
- 
- # benchmark
- benchmark/init_finalize
 diff --git a/test/basic/Makefile.am b/test/basic/Makefile.am
 index fe9204b..56d6918 100644
 --- a/test/basic/Makefile.am
