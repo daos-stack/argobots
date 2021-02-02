@@ -1,12 +1,18 @@
 Name: argobots
-Version: 1.1~a1
+
+%global major 1
+%global minor 1
+%global prerelease a1
+%global tag %{major}.%{minor}%{prerelease}
+Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
+
 Release: 1%{?dist}.g7fd1987
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
 Url: http://www.argobots.org/
 #Source: https://api.github.com/repos/pmodels/$(NAME)/tarball/31703b1
-Source: https://github.com/pmodels/%{name}/releases/download/v%{version}/%{name}-%{version}.tar.gz
+Source: https://github.com/pmodels/%{name}/releases/download/v%{tag}/%{name}-%{tag}.tar.gz
 # patch to gather all changes from v1.1a1 tag up to ULTs stack unwinding commit
 Patch0: v1.1a1..7fd1987.patch
 
@@ -101,7 +107,7 @@ rm -f %{buildroot}%{_libdir}/*.la
 %{_includedir}/*
 
 %changelog
-* Wed Jan 20 2021 B.Faccini <bruno.faccini@intel.com> - 1.1a1-1.g7fd1987
+* Wed Feb 02 2021 B.Faccini <bruno.faccini@intel.com> - 1.1~a1-1.g7fd1987
 - upgrade to 1.1a1
 - add a patch to bring up 7fd1987 which enables libunwind support
 - build with unwinding enabled
