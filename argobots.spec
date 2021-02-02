@@ -6,7 +6,7 @@ Name: argobots
 %global tag %{major}.%{minor}%{prerelease}
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
 
-Release: 1%{?dist}.g7fd1987
+Release: 1.g7fd1987%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
