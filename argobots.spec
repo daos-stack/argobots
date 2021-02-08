@@ -3,7 +3,7 @@ Name: argobots
 %global major 1
 %global minor 1
 %global prerelease a1
-%global tag %{major}.%{minor}%{prerelease}
+%global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
 Release: 1.g7fd1987%{?dist}
