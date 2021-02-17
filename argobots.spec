@@ -24,6 +24,9 @@ BuildRequires: autoconf, automake, libtool
 # need libunwind if configuring symbolic ULTs stack dumps feature
 BuildRequires: libunwind-devel
 
+# need valgrind if enabling Valgrind instrumenting
+BuildRequires: valgrind-devel
+
 %description
 Argobots is a lightweight, low-level threading and tasking framework.
 This release is an experimental version of Argobots that contains
