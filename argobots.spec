@@ -24,12 +24,6 @@ BuildRequires: autoconf, automake, libtool
 # need libunwind if configuring symbolic ULTs stack dumps feature
 BuildRequires: libunwind-devel
 
-%ifarch x86_64
-%global configopts --enable-sockets --enable-verbs --enable-usnic --disable-static --enable-psm --enable-psm2 --enable-stack-unwind
-%else
-%global configopts --enable-sockets --enable-verbs --enable-usnic --disable-static --enable-stack-unwind
-%endif
-
 %description
 Argobots is a lightweight, low-level threading and tasking framework.
 This release is an experimental version of Argobots that contains
@@ -71,7 +65,7 @@ if true || [ ! -f configure ]; then
     ./autogen.sh
 fi
 # defaults: with-dlopen can be over-rode:
-%configure 
+%configure --enable-valgrind --enable-stack-unwind
 make %{?_smp_mflags} V=1
 
 %install
