@@ -104,6 +104,7 @@ rm -f %{buildroot}%{_libdir}/*.la
 %changelog
 * Tue Feb 23 2021 B.Faccini <bruno.faccini@intel.com> - 1.1~b1-1
 - Update to 1.1b1
+- Build with unwinding enabled
 
 * Mon Aug 17 2020 Brian J. Murrell <brian.murrell@intel.com> - 1.0-1
 - Update to 1.0 final
