@@ -1,3 +1,10 @@
+argobots (1.1~b1-1) unstable; urgency=medium
+  [ Bruno Faccini ]
+  * Update to 1.1b1
+  * Build with unwinding enabled
+
+ -- Bruno Faccini <bruno.faccini@intel.com>  Tue, 23 Feb 2021 14:22:37 -0500
+
 argobots (1.0-1) unstable; urgency=medium
   [ Brian J. Murrell ]
   * Update to 1.0 final

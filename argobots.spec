@@ -1,23 +1,29 @@
 Name: argobots
-Version: 1.0
+
+%global major 1
+%global minor 1
+%global prerelease b1
+%global tag %{major}.%{minor}%{?prerelease}
+
+Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
 Release: 1%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
 Url: http://www.argobots.org/
 #Source: https://api.github.com/repos/pmodels/$(NAME)/tarball/31703b1
-Source: https://github.com/pmodels/%{name}/releases/download/v%{version}/%{name}-%{version}.tar.gz
+Source: https://github.com/pmodels/%{name}/releases/download/v%{tag}/%{name}-%{tag}.tar.gz
 
 BuildRequires: pkgconfig
 
 # to be able to generate configure if not present
 BuildRequires: autoconf, automake, libtool
 
-%ifarch x86_64
-%global configopts --enable-sockets --enable-verbs --enable-usnic --disable-static --enable-psm --enable-psm2
-%else
-%global configopts --enable-sockets --enable-verbs --enable-usnic --disable-static
-%endif
+# need libunwind if configuring symbolic ULTs stack dumps feature
+BuildRequires: libunwind-devel
+
+# need valgrind if enabling Valgrind instrumenting
+BuildRequires: valgrind-devel
 
 %description
 Argobots is a lightweight, low-level threading and tasking framework.
@@ -52,7 +58,7 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 Development files for the argobots library.
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n %{name}-%{tag}
 
 %build
 # need to force autogen.sh since we have patches that touch a Makefile.am
@@ -60,7 +66,7 @@ if true || [ ! -f configure ]; then
     ./autogen.sh
 fi
 # defaults: with-dlopen can be over-rode:
-%configure 
+%configure --enable-valgrind --enable-stack-unwind
 make %{?_smp_mflags} V=1
 
 %install
@@ -96,6 +102,10 @@ rm -f %{buildroot}%{_libdir}/*.la
 %{_includedir}/*
 
 %changelog
+* Tue Feb 23 2021 B.Faccini <bruno.faccini@intel.com> - 1.1~b1-1
+- Update to 1.1b1
+- Build with unwinding enabled
+
 * Mon Aug 17 2020 Brian J. Murrell <brian.murrell@intel.com> - 1.0-1
 - Update to 1.0 final
 
