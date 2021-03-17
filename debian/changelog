@@ -1,3 +1,9 @@
+argobots (1.1~rc1-1) unstable; urgency=medium
+  [ Brian J. Murrell ]
+  * Update to 1.1rc1
+
+ -- Brian J. Murrell <brian.murrell@intel.com>  Wed, 17 Mar 2021 10:29:59 -0400
+
 argobots (1.1~b1-1) unstable; urgency=medium
   [ Bruno Faccini ]
   * Update to 1.1b1
