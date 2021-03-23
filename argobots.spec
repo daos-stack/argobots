@@ -2,7 +2,7 @@ Name: argobots
 
 %global major 1
 %global minor 1
-%global prerelease b1
+%global prerelease rc1
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
@@ -102,6 +102,9 @@ rm -f %{buildroot}%{_libdir}/*.la
 %{_includedir}/*
 
 %changelog
+* Wed Mar 17 2021 Brian J. Murrell <brian.murrell@intel.com> - 1.1~rc1-1
+- Update to 1.1rc1
+
 * Tue Feb 23 2021 B.Faccini <bruno.faccini@intel.com> - 1.1~b1-1
 - Update to 1.1b1
 - Build with unwinding enabled
