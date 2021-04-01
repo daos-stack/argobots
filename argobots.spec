@@ -2,7 +2,7 @@ Name: argobots
 
 %global major 1
 %global minor 1
-%global prerelease rc2
+#%%global prerelease
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
@@ -102,8 +102,8 @@ rm -f %{buildroot}%{_libdir}/*.la
 %{_includedir}/*
 
 %changelog
-* Mon Mar 29 2021 Brian J. Murrell <brian.murrell@intel.com> - 1.1~rc1-2
-- Update to 1.1rc2
+* Thu Apr 01 2021 Brian J. Murrell <brian.murrell@intel.com> - 1.1-1
+- Update to 1.1
 
 * Wed Mar 17 2021 Brian J. Murrell <brian.murrell@intel.com> - 1.1~rc1-1
 - Update to 1.1rc1
