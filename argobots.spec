@@ -6,7 +6,7 @@ Name: argobots
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
@@ -35,6 +35,7 @@ features related to user-level threads, tasklets, and some schedulers.
 Summary: Development files for the argobots library
 Group: System Environment/Libraries
 Obsoletes: %{name} < %{version}-%{release}
+Provides: argobots = %{version}-%{release}
 
 %description -n libabt0
 Argobots is a lightweight, low-level threading and tasking framework.
@@ -57,6 +58,12 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 %endif
 Development files for the argobots library.
 
+%if (0%{?suse_version} > 0)
+%global __debug_package 1
+%global _debuginfo_subpackages 1
+%debug_package
+%endif
+
 %prep
 %autosetup -p1 -n %{name}-%{tag}
 
@@ -72,7 +79,7 @@ make %{?_smp_mflags} V=1
 %install
 %make_install
 # remove unpackaged files from the buildroot
-rm -f %{buildroot}%{_libdir}/*.la
+rm -f %{buildroot}%{_libdir}/*.{l,}a
 
 %if (0%{?suse_version} >= 1315)
 %post -n libabt0 -p /sbin/ldconfig
@@ -97,11 +104,15 @@ rm -f %{buildroot}%{_libdir}/*.la
 %files devel
 %endif
 %{_libdir}/*.so
-%{_libdir}/*.a
 %{_libdir}/pkgconfig/*
 %{_includedir}/*
+%doc README
 
 %changelog
+* Wed Oct 19 2022 Brian J. Murrell <brian.murrell@intel.com> - 1.1-2
+- Create debuginfo packages for SUSE
+- Fix up some issues found by rpmlint
+
 * Thu Apr 01 2021 Brian J. Murrell <brian.murrell@intel.com> - 1.1-1
 - Update to 1.1
 
