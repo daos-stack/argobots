@@ -144,16 +144,32 @@ jobs:
         run: . ci/gha_functions.sh;
              rm -f ${REPO_PATH}lastSuccessfulBuild;
              ln -s $(get_repo_serial) ${REPO_PATH}lastSuccessfulBuild
-      - name: Test RPMs with DAOS
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GHA_WORKFLOW_TRIGGER }}
-          script: |
-            const result = await github.rest.actions.createWorkflowDispatch({
-              owner: 'daos-stack',
-              repo: 'daos',
-              workflow_id: 'rpm-build-and-test.yml',
-              ref: 'bmurrell/gha-self-hosted-runner'
-            })
-            console.log(result)
 
+  Test-EL8-RPM:
+    name: Test RPMs on EL 8
+    runs-on: [self-hosted, mockbuilder]
+    # needs: [Import-commit-message, Import-commit-pragmas, Import-commit-pragmas2]
+    steps:
+      - name: Test RPMs with DAOS
+        uses: convictional/trigger-workflow-and-wait@v1.6.1
+        with:
+          owner: daos-stack
+          repo: daos
+          github_token: ${{ secrets.GHA_WORKFLOW_TRIGGER }}
+          comment_downstream_url: ${{ github.event.pull_request.comments_url }}
+          workflow_file_name: 'rpm-build-and-test.yml'
+          ref: bmurrell/gha-self-hosted-runner
+          wait_interval: 10
+          client_payload: '{}'
+          propagate_failure: true
+        # uses: actions/github-script@v6
+        # with:
+        #   github-token: ${{ secrets.GHA_WORKFLOW_TRIGGER }}
+        #   script: |
+        #     const result = await github.rest.actions.createWorkflowDispatch({
+        #       owner: 'daos-stack',
+        #       repo: 'daos',
+        #       workflow_id: 'rpm-build-and-test.yml',
+        #       ref: 'bmurrell/gha-self-hosted-runner'
+        #     })
+        #     console.log(result)
