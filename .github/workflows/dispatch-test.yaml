@@ -1,0 +1,24 @@
+name: Dispatch test
+
+on:
+  pull_request:
+
+jobs:
+
+  Dispatch:
+    name: Dispatch
+    runs-on: [self-hosted, mockbuilder]
+    steps:
+      - name: Dispatch
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const result = await github.rest.actions.createWorkflowDispatch({
+              owner: 'daos-stack',
+              repo: 'daos',
+              workflow_id: 'rpm-build-and-test.yml',
+              ref: 'bmurrell/gha-self-hosted-runner'
+            })
+            console.log(result)
+
