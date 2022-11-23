@@ -1,0 +1,147 @@
+name: RPM Build and Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+concurrency:
+  group: rpm-build-and-test-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  Import-commit-message:
+    name: Get commit message
+    runs-on: [self-hosted, mockbuilder]
+    # Map a step output to a job output
+    outputs:
+      message: ${{ steps.commit_message.outputs.text }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 500
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Import Commit Message
+        id: commit_message
+        run: echo "text<<EOF" >> $GITHUB_OUTPUT;
+             git show -s --format=%B >> $GITHUB_OUTPUT;
+             echo "EOF" >> $GITHUB_OUTPUT;
+
+  Import-commit-pragmas:
+    name: Save commit pragmas
+    runs-on: [self-hosted, mockbuilder]
+    needs: [Import-commit-message]
+    # Map a step output to a job output
+    outputs:
+      pragmas: ${{ steps.commit_pragmas.outputs.text }}
+    steps:
+      - name: Import Commit Pragmas
+        id: commit_pragmas
+        run: set -x; echo "text<<EOF" >> $GITHUB_OUTPUT;
+             echo "${{ needs.Import-commit-message.outputs.message }}" |
+               ci/get_commmit_pragmas.sh >> $GITHUB_OUTPUT;
+             echo "EOF" >> $GITHUB_OUTPUT;
+             cat $GITHUB_OUTPUT
+
+  Import-commit-pragmas2:
+    name: Make commit pragma variables
+    runs-on: [self-hosted, mockbuilder]
+    needs: [Import-commit-pragmas]
+    # Map a step output to a job output
+    outputs:
+      skip-func-test-el8: ${{ steps.skip-func-test-el8.outputs.text }}
+      rpm-test-version: ${{ steps.rpm-test-version.outputs.text }}
+      pr-repos: ${{ steps.pr-repos.outputs.text }}
+    steps:
+      - name: Set skip-func-test-el8 variable
+        id: skip-func-test-el8
+        run: set -x;
+             ${{ needs.Import-commit-pragmas.outputs.pragmas }}
+             echo "text=$SKIP_FUNC_TEST_EL8" >> $GITHUB_OUTPUT;
+             cat $GITHUB_OUTPUT
+      - name: Set rpm-test-version variable
+        id: rpm-test-version
+        run: set -x;
+             ${{ needs.Import-commit-pragmas.outputs.pragmas }}
+             echo "text=$RPM_TEST_VERSION" >> $GITHUB_OUTPUT;
+             cat $GITHUB_OUTPUT
+      - name: Set pr-repos variable
+        id: pr-repos
+        run: set -x;
+             ${{ needs.Import-commit-pragmas.outputs.pragmas }}
+             echo "text=$PR_REPOS" >> $GITHUB_OUTPUT;
+             cat $GITHUB_OUTPUT
+
+  Build-EL8-RPM:
+    name: Build RPM on EL 8
+    runs-on: [self-hosted, mockbuilder]
+    needs: [Import-commit-message, Import-commit-pragmas, Import-commit-pragmas2]
+    # yamllint disable-line rule:line-length
+    if: needs.Import-commit-pragmas2.outputs.rpm-test-version == '' && !contains(needs.Import-commit-pragmas2.outputs.pr-repos, 'argobots@')
+    env:
+      ARTIFACTORY_URL: https://artifactory.dc.hpdd.intel.com/
+      BUILD_CHROOT: /var/lib/mock/rocky+epel-8-x86_64-${{ github.run_id }}/
+      DAOS_EMAIL: brian.murrell@intel.com
+      DAOS_FULLNAME: daos-stack
+      DISTRO: el8
+      DISTRO_REPOS: disabled
+      DISTRO_VERSION: 8
+      MOCK_OPTIONS: --uniqueext=${{ github.run_id }}
+      PR_NUM: ${{ github.event.pull_request.number }}
+      # yamllint disable-line rule:line-length
+      REPO_PATH: /data/gha_runners/job_repos/daos-stack/daos/PR-${{ github.event.pull_request.number }}/
+      REPO_FILE_URL: https://artifactory.dc.hpdd.intel.com/artifactory/repo-files/
+      RPM_BUILD_OPTIONS: --define "relval .8836.g3c16ca3d" --define "scons_args BUILD_TYPE=dev"
+      RUN_ID: ${{ github.run_id }}
+      STAGE_NAME: Build RPM on EL 8
+      TARGET: el8
+    steps:
+      # - name: Show most recent commit
+      #   run: echo "${{ needs.Import-commit-message.outputs.message }}"
+      # - name: Show commit pragmas
+      #   run: echo '${{ needs.Import-commit-pragmas.outputs.pragmas }}'
+      - name: Show pr-repos commit pragma
+        run: echo '${{ needs.Import-commit-pragmas2.outputs.pr-repos }}'
+      - name: Import commit pragmas
+        run: set -x; echo '${{ needs.Import-commit-pragmas.outputs.pragmas }}' |
+             sed -e 's/^/cp_/' >> $GITHUB_ENV
+      # - name: Show env
+      #   run: env | sort
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 500
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Build RPM
+        run: |
+          rm -rf artifacts/el8/
+          mkdir -p artifacts/el8/
+          make CHROOT_NAME="rocky+epel-8-x86_64"        \
+               DISTRO_VERSION=${{ env.DISTRO_VERSION }} \
+               chrootbuild
+      - name: Save root.log
+        uses: actions/upload-artifact@v3
+        with:
+          name: root.log
+          path: ${{ env.BUILD_CHROOT }}result/root.log
+      - name: Save build.log
+        uses: actions/upload-artifact@v3
+        with:
+          name: build.log
+          path: ${{ env.BUILD_CHROOT }}result/build.log
+      - name: Create Repo
+        run: env >&2;
+             ci/rpm/create_repo.sh
+      - name: Test Repo
+        run: . ci/gha_functions.sh;
+             dnf --disablerepo=\*
+                 --repofrompath testrepo,file://${REPO_PATH}$(get_repo_serial)/$TARGET
+                 repoquery -a;
+             echo $?
+      - name: Create lastSuccessfulBuild symlink
+        run: . ci/gha_functions.sh;
+             rm -f ${REPO_PATH}lastSuccessfulBuild;
+             ln -s $(get_repo_serial) ${REPO_PATH}lastSuccessfulBuild
