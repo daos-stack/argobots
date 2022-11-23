@@ -148,6 +148,7 @@ jobs:
   Test-EL8-RPM:
     name: Test RPMs on EL 8
     runs-on: [self-hosted, mockbuilder]
+    needs: [Build-EL8-RPM]
     # needs: [Import-commit-message, Import-commit-pragmas, Import-commit-pragmas2]
     steps:
       - name: Test RPMs with DAOS
