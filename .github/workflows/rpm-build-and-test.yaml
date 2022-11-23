@@ -93,7 +93,6 @@ jobs:
       # yamllint disable-line rule:line-length
       REPO_PATH: /data/gha_runners/job_repos/daos-stack/daos/PR-${{ github.event.pull_request.number }}/
       REPO_FILE_URL: https://artifactory.dc.hpdd.intel.com/artifactory/repo-files/
-      RPM_BUILD_OPTIONS: --define "relval .8836.g3c16ca3d" --define "scons_args BUILD_TYPE=dev"
       RUN_ID: ${{ github.run_id }}
       STAGE_NAME: Build RPM on EL 8
       TARGET: el8
@@ -145,3 +144,16 @@ jobs:
         run: . ci/gha_functions.sh;
              rm -f ${REPO_PATH}lastSuccessfulBuild;
              ln -s $(get_repo_serial) ${REPO_PATH}lastSuccessfulBuild
+      - name: Test RPMs with DAOS
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const result = await github.rest.actions.createWorkflowDispatch({
+              owner: 'daos-stack',
+              repo: 'daos',
+              workflow_id: 'rpm-build-and-test.yml',
+              ref: 'bmurrell/gha-self-hosted-runner'
+            })
+            console.log(result)
+
