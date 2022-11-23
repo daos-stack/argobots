@@ -6,7 +6,7 @@ Name: argobots
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
-Release: 3%{?dist}
+Release: 3.1%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
@@ -109,6 +109,9 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %doc README
 
 %changelog
+* Tue Apr 16 2024 Brian J. Murrell <brian.murrell@intel.com> - 1.1-3.1
+- Bump release so that it's newer than what is in the repo
+
 * Tue Jun 06 2023 Brian J. Murrell <brian.murrell@intel.com> - 1.1-3
 - Update to build on EL9
 
