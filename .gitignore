@@ -1,3 +1,4 @@
 _topdir/
 *.tar.gz
 *-workspace
+mock_result/
