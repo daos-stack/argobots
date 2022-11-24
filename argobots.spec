@@ -6,7 +6,7 @@ Name: argobots
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
-Release: 2%{?dist}
+Release: 2.1%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
@@ -109,6 +109,9 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %doc README
 
 %changelog
+* Wed Nov 23 2022 Brian J. Murrell <brian.murrell@intel.com> - 1.1-2.1
+- Bump release so that it's newer than what is in the repo
+
 * Wed Oct 19 2022 Brian J. Murrell <brian.murrell@intel.com> - 1.1-2
 - Create debuginfo packages for SUSE
 - Fix up some issues found by rpmlint
