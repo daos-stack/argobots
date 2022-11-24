@@ -82,7 +82,7 @@ jobs:
     runs-on: [self-hosted, mockbuilder]
     needs: [Import-commit-message, Import-commit-pragmas, Import-commit-pragmas2]
     # yamllint disable-line rule:line-length
-    if: needs.Import-commit-pragmas2.outputs.rpm-test-version == '' && !contains(needs.Import-commit-pragmas2.outputs.pr-repos, 'argobots@')
+    if: false || (needs.Import-commit-pragmas2.outputs.rpm-test-version == '' && !contains(needs.Import-commit-pragmas2.outputs.pr-repos, 'argobots@'))
     env:
       ARTIFACTORY_URL: https://artifactory.dc.hpdd.intel.com/
       BUILD_CHROOT: /var/lib/mock/rocky+epel-8-x86_64-${{ github.run_id }}/
@@ -153,6 +153,15 @@ jobs:
     runs-on: [self-hosted, mockbuilder]
     needs: [Build-EL8-RPM]
     # needs: [Import-commit-message, Import-commit-pragmas, Import-commit-pragmas2]
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [master, release/2.2]
+        include:
+          - branch: master
+            use_branch: bmurrell/gha-self-hosted-runner
+          - branch: release/2.2
+            use_branch: bmurrell/gha-self-hosted-runner-2.2
     steps:
       - name: Test RPMs with DAOS
         uses: convictional/trigger-workflow-and-wait@v1.6.5
@@ -162,7 +171,7 @@ jobs:
           github_token: ${{ secrets.GHA_WORKFLOW_TRIGGER }}
           comment_downstream_url: ${{ github.event.pull_request.comments_url }}
           workflow_file_name: 'rpm-build-and-test.yml'
-          ref: bmurrell/gha-self-hosted-runner
+          ref: ${{ matrix.use_branch }}
           wait_interval: 10
           client_payload: '{"pr-repos": "argobots@PR-${{ github.event.pull_request.number }}"}'
           propagate_failure: true
