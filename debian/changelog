@@ -1,3 +1,9 @@
+argobots (1.2-1) unstable; urgency=medium
+  [ Brian J. Murrell ]
+  * Update to 1.2
+
+ -- Brian J. Murrell <brian.murrell@intel.com>  Tue, 02 Apr 2024 16:08:44 -0400
+
 argobots (1.1-2) unstable; urgency=medium
   [ Brian J. Murrell ]
   * NOOP change to keep parity with RPM versioning
