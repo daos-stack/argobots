@@ -66,6 +66,10 @@ jobs:
       pr-repos: ${{ steps.pr-repos.outputs.value }}
       run-gha: ${{ steps.run-gha.outputs.value }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set rpm-test-version variable
         id: rpm-test-version
         uses: ./.github/actions/variable-from-pragma
@@ -122,6 +126,10 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.text }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Import commit pragmas
         uses: ./.github/actions/import-commit-pragmas
       - name: Calculate RPM Build Matrix
@@ -178,6 +186,10 @@ jobs:
       DISTRO_VERSION:
       CP_LEAP15_VERSION:
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Import commit pragmas
         uses: ./.github/actions/import-commit-pragmas
       - name: Set variables
