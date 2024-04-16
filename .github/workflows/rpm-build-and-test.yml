@@ -68,19 +68,19 @@ jobs:
     steps:
       - name: Set rpm-test-version variable
         id: rpm-test-version
-        uses: daos-stack/daos/variable-from-pragma
+        uses: ./.github/actions/variable-from-pragma
         with:
           commit_message: ${{ needs.Import-commit-message.outputs.dequoted_message }}
           pragma: RPM_TEST_VERSION
       - name: Set pr-repos variable
         id: pr-repos
-        uses: daos-stack/daos/variable-from-pragma
+        uses: ./.github/actions/variable-from-pragma
         with:
           commit_message: ${{ needs.Import-commit-message.outputs.dequoted_message }}
           pragma: PR_REPOS
       - name: Set run-gha variable
         id: run-gha
-        uses: daos-stack/daos/variable-from-pragma
+        uses: ./.github/actions/variable-from-pragma
         with:
           commit_message: ${{ needs.Import-commit-message.outputs.dequoted_message }}
           pragma: RUN_GHA
