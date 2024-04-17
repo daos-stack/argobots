@@ -307,7 +307,8 @@ jobs:
       fail-fast: false
       matrix:
         # branch: [master, release/2.4]
-        branch: [master]
+        # branch: [master]
+        branch: [bmurrell/run-on-dispatch]
     steps:
       - name: Test RPMs with DAOS
         uses: convictional/trigger-workflow-and-wait@v1.6.5
