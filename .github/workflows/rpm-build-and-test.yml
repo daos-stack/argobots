@@ -321,5 +321,5 @@ jobs:
           ref: ${{ matrix.branch }}
           wait_interval: 10
           client_payload: '{"pr-repos":       "argobots@PR-${{ github.event.pull_request.number }}",
-                            "commit-message": ""}'
+                            "commit-message": "Override commit pragmas"}'
           propagate_failure: true
