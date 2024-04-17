@@ -318,8 +318,19 @@ jobs:
           github_token: ${{ secrets.GHA_WORKFLOW_TRIGGER }}
           comment_downstream_url: ${{ github.event.pull_request.comments_url }}
           workflow_file_name: 'rpm-build-and-test.yml'
+          # TODO: or rather I suspect it's a TODO, but I suspect we need to create
+          #       a temporary branch here so as not to pollute the landing branch
+          #       runs with these tests
           ref: ${{ matrix.branch }}
           wait_interval: 10
-          client_payload: '{"pr-repos":       "argobots@PR-${{ github.event.pull_request.number }}",
-                            "commit-message": "Override commit pragmas"}'
+          client_payload: '{"pr-repos":
+                              "argobots@PR-${{ github.event.pull_request.number }}",
+                            "commit-message":
+                              "Override commit pragmas",
+                            "test-tag":
+                              "load_mpi test_core_files",
+                            "rpm-test-version":
+                              "2.5.101"}'  # TODO: this of course needs to either be the latest
+                                           #       version, or better yet, no version and it
+                                           #       installs the latest version
           propagate_failure: true
