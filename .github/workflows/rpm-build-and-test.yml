@@ -198,7 +198,7 @@ jobs:
         uses: ./.github/actions/import-commit-pragmas
       - name: Set variables
         run: |
-            FVERSION="38"
+            FVERSION="latest"
             case ${{ matrix.distro }} in
                 'el8')
                     CHROOT_NAME="rocky+epel-8-x86_64"
