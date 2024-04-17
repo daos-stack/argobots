@@ -320,5 +320,6 @@ jobs:
           workflow_file_name: 'rpm-build-and-test.yml'
           ref: ${{ matrix.branch }}
           wait_interval: 10
-          client_payload: '{"pr-repos": "argobots@PR-${{ github.event.pull_request.number }}"}'
+          client_payload: '{"pr-repos":       "argobots@PR-${{ github.event.pull_request.number }}",
+                            "commit-message": ""}'
           propagate_failure: true
