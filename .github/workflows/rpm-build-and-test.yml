@@ -189,6 +189,7 @@ jobs:
       DISTRO_NAME:
       DISTRO_VERSION:
       CP_LEAP15_VERSION:
+      FVERSION:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -323,6 +324,9 @@ jobs:
           #       runs with these tests
           ref: ${{ matrix.branch }}
           wait_interval: 10
+          # TODO: rpm-test-version of course needs to either be the latest
+          #       version, or better yet, no version and it installs the latest
+          #       version
           client_payload: '{"pr-repos":
                               "argobots@PR-${{ github.event.pull_request.number }}",
                             "commit-message":
@@ -330,7 +334,5 @@ jobs:
                             "test-tag":
                               "load_mpi test_core_files",
                             "rpm-test-version":
-                              "2.5.101"}'  # TODO: this of course needs to either be the latest
-                                           #       version, or better yet, no version and it
-                                           #       installs the latest version
+                              "2.5.101"}'
           propagate_failure: true
