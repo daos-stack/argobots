@@ -347,3 +347,12 @@ jobs:
                            }'
 
           propagate_failure: true
+
+  Cleanup-cancelled:
+    # TODO: investigate how cancelling this can cancel the downstream job
+    name: Test RPMs with DAOS
+    runs-on: [self-hosted, mockbuilder]
+    if: cancelled()
+    steps:
+      - name: Cleanup downstream jobs
+        run: echo "Cancelling downstream jobs (but how?)"
