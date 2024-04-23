@@ -298,11 +298,12 @@ jobs:
         if: steps.test-repo.outcome != 'success'
         run: rm -f ${REPO_PATH}lastSuccessfulBuild;
              exit 1
-      - name: Publish RPMs
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.DISTRO_NAME }} ${{ env.DISTRO_VERSION }} RPM repository
-          path: ${{ env.REPO_PATH}}${{ github.run_number }}/artifact/artifacts/${{ env.TARGET }}
+        # We can't actually do this due to SDL requirements
+        # - name: Publish RPMs
+        #   uses: actions/upload-artifact@v4
+        #   with:
+        #     name: ${{ env.DISTRO_NAME }} ${{ env.DISTRO_VERSION }} RPM repository
+        #     path: ${{ env.REPO_PATH}}${{ github.run_number }}/artifact/artifacts/${{ env.TARGET }}
 
   Test-with-DAOS:
     # TODO: investigate how cancelling this can cancel the downstream job
