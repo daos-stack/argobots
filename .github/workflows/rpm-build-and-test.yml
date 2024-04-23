@@ -156,8 +156,7 @@ jobs:
              if ! ${CP_SKIP_BUILD_EL9_RPM:-false} && [[ ${distros[@]} =~ el9 ]]; then
                  l+=('"el9"')
              fi
-             if ${{ contains(fromJSON('["push", "pull_request"]'), github.event_name) }} &&
-                ! ${CP_SKIP_BUILD_LEAP15_RPM:-false}) && [[ ${distros[@]} =~ el8 ]]; then
+             if ! ${CP_SKIP_BUILD_LEAP15_RPM:-false}) && [[ ${distros[@]} =~ leap15 ]]; then
                  l+=('"leap15"')
              fi
 
