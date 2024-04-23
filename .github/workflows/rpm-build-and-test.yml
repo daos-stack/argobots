@@ -342,7 +342,7 @@ jobs:
                             "rpm-test-version":
                               "2.5.101",
                             "functional-test-distros":
-                              "${{ fromJSON(needs.Calc-rpm-build-matrix.outputs.matrix) }}"
+                              "${{ needs.Calc-rpm-build-matrix.outputs.matrix }}"
                            }'
 
           propagate_failure: true
