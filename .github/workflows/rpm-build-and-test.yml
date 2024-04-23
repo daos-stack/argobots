@@ -133,6 +133,7 @@ jobs:
     runs-on: [self-hosted, wolf]
     needs: [Import-commit-pragmas, Create-symlinks]
     outputs:
+      distros: ${{ steps.distros.outputs.text }}
       matrix: ${{ steps.matrix.outputs.text }}
     steps:
       - name: Checkout code
@@ -141,8 +142,27 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Import commit pragmas
         uses: ./.github/actions/import-commit-pragmas
+      - name: Calculate RPM Build Distros
+        id: distros
+        run: |  # do not use the non-| format for this script
+             l=()
+             trap 'echo "text=${l[*]}" >> $GITHUB_OUTPUT' EXIT
+             if ${CP_SKIP_BUILD:-false}; then
+                 exit 0
+             fi
+             distros=(${{ env.DISTROS }})
+             if ! ${CP_SKIP_BUILD_EL8_RPM:-false} && [[ ${distros[@]} =~ el8 ]]; then
+                 l+=(el8)
+             fi
+             if ! ${CP_SKIP_BUILD_EL9_RPM:-false} && [[ ${distros[@]} =~ el9 ]]; then
+                 l+=(el9)
+             fi
+             if ! ${CP_SKIP_BUILD_LEAP15_RPM:-false} && [[ ${distros[@]} =~ leap15 ]]; then
+                 l+=(leap15)
+             fi
       - name: Calculate RPM Build Matrix
         id: matrix
+        # TODO: make this consume the previous step's output
         run: |  # do not use the non-| format for this script
              l=()
              trap 'echo "text=[$(IFS=","; echo "${l[*]}")]" >> $GITHUB_OUTPUT' EXIT
@@ -343,7 +363,7 @@ jobs:
                             "rpm-test-version":
                               "2.5.101",
                             "functional-test-distros":
-                              ${{ env.DISTROS }}
+                              "${{ env.DISTROS }}"
                            }'
 
           propagate_failure: true
