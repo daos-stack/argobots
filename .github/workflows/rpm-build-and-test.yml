@@ -343,7 +343,7 @@ jobs:
                             "rpm-test-version":
                               "2.5.101",
                             "functional-test-distros":
-                              ${{ needs.Calc-rpm-build-matrix.outputs.matrix }}
+                              ${{ env.DISTROS }}
                            }'
 
           propagate_failure: true
