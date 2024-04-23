@@ -7,6 +7,7 @@ env:
   EL8_BUILD_VERSION: 8.6
   EL9_BUILD_VERSION: 9
   LEAP15_VERSION: 15.5
+  TEST_TAG: pr
 
 on:
   workflow_dispatch:
@@ -301,6 +302,7 @@ jobs:
           path: ${{ env.REPO_PATH}}${{ github.run_number }}/artifact/artifacts/${{ env.TARGET }}
 
   Test-EL8-RPM:
+    # TODO: investigate how cancelling this can cancel the downstream job
     name: Test RPMs on EL 8
     runs-on: [self-hosted, mockbuilder]
     needs: [Build-RPM]
@@ -332,7 +334,7 @@ jobs:
                             "commit-message":
                               "Override commit pragmas",
                             "test-tag":
-                              "load_mpi test_core_files",
+                              "load_mpi test_core_files ${{ env.TEST_TAG }}",
                             "rpm-test-version":
                               "2.5.101"}'
           propagate_failure: true
