@@ -52,12 +52,13 @@ jobs:
       EL9_BUILD_VERSION: ${{ env.EL9_BUILD_VERSION }}
       LEAP15_VERSION: ${{ env.LEAP15_VERSION }}
       PACKAGING_DIR: ${{ env.PACKAGING_DIR }}
+      TEST_TAG: ${{ env.TEST_TAG }}
     steps:
       - name: Echo
         if: false
         run: echo
 
-  call-rpm-build:
+  Call-RPM-Build:
     name: Build RPM
     needs: variables
     permissions:
@@ -71,49 +72,12 @@ jobs:
       LEAP15_VERSION: ${{ needs.variables.outputs.LEAP15_VERSION }}
       PACKAGING_DIR: ${{ needs.variables.outputs.PACKAGING_DIR}}
 
-  Test-with-DAOS:
+  Call-RPM-Test:
     # TODO: investigate how cancelling this can cancel the downstream job
     name: Test RPMs with DAOS
-    runs-on: [self-hosted, mockbuilder]
-    timeout-minutes: 7200
-    strategy:
-      fail-fast: false
-      matrix:
-        # no GHA support on this branch: branch: [master, release/2.4]
-        # DO NOT LAND - using PR as master for now
-        # branch: [master]
-        branch: [bmurrell/run-on-dispatch]
-    steps:
-      - name: Test RPMs with DAOS
-        uses: convictional/trigger-workflow-and-wait@v1.6.5
-        with:
-          owner: daos-stack
-          repo: daos
-          github_token: ${{ secrets.GHA_WORKFLOW_TRIGGER }}
-          comment_downstream_url: ${{ github.event.pull_request.comments_url }}
-          workflow_file_name: 'rpm-build-and-test.yml'
-          # TODO: or rather I suspect it's a TODO, but I suspect we need to create
-          #       a temporary branch here so as not to pollute the landing branch
-          #       runs with these tests
-          ref: ${{ matrix.branch }}
-          wait_interval: 10
-          # TODO: rpm-test-version of course needs to either be the latest
-          #       version, or better yet, no version and it installs the latest
-          #       version
-          client_payload: '{"pr-repos":
-                              "${{ env.NAME }}@PR-${{ github.event.pull_request.number }}",
-                            "commit-message":
-                              "Override commit pragmas",
-                            "test-tag":
-                              "load_mpi,vm test_core_files,vm ${{ env.TEST_TAG }}",
-                            "rpm-test-version":
-                              "2.5.101",
-                            "functional-test-distros":
-                              "${{ env.DISTROS }}"
-                           }'
-
-          propagate_failure: true
-      # TODO: investigate how cancelling this can cancel the downstream job
-      - name: Cleanup downstream jobs
-        if: cancelled()
-        run: echo "Cancelling downstream jobs (but how?)"
+    needs: variables
+    uses: ./.github/workflows/rpm-test.yml
+    with:
+      NAME: ${{ needs.variables.outputs.NAME }}
+      DISTROS: ${{ needs.variables.outputs.DISTROS }}
+      TEST_TAG: ${{ needs.variables.outputs.TEST_TAG }}
