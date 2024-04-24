@@ -2,13 +2,6 @@ name: RPM Build
 
 on:
   workflow_call:
-    inputs:
-      config-path:
-        required: true
-        type: string
-    secrets:
-      token:
-        required: true
 
 jobs:
   # it's a real shame that this step is even needed.  push events have the commit message in
