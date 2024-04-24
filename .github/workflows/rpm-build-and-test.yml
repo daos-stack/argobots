@@ -42,8 +42,9 @@ defaults:
 permissions: {}
 
 jobs:
-  call-rpm-buil:
+  call-rpm-build:
     uses: ./.github/workflows/rpm-build.yml
+    secrets: inherit
 
   Test-with-DAOS:
     # TODO: investigate how cancelling this can cancel the downstream job
