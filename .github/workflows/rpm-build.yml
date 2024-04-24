@@ -2,6 +2,22 @@ name: RPM Build
 
 on:
   workflow_call:
+    inputs:
+      NAME:
+        type: string
+        required: true
+      DISTROS:
+        type: string
+        required: true
+      EL8_BUILD_VERSION:
+        type: string
+        required: true
+      EL9_BUILD_VERSION:
+        type: string
+        required: true
+      PACKAGING_DIR:
+        type: string
+        required: true
 
 jobs:
   # it's a real shame that this step is even needed.  push events have the commit message in
@@ -91,7 +107,7 @@ jobs:
     steps:
       - name: Set name variable
         id: name
-        run: echo 'text=${{ env.NAME }}' >> $GITHUB_OUTPUT
+        run: echo 'text=${{ inputs.NAME }}' >> $GITHUB_OUTPUT
 
   Create-symlinks:
     # you might think this is an odd place to do this and it should be done as a result of the
@@ -156,7 +172,7 @@ jobs:
              if ${CP_SKIP_BUILD:-false}; then
                  exit 0
              fi
-             distros=(${{ env.DISTROS }})
+             distros=(${{ input.DISTROS }})
              if ! ${CP_SKIP_BUILD_EL8_RPM:-false} && [[ ${distros[@]} =~ el8 ]]; then
                  l+=(el8)
              fi
@@ -176,7 +192,7 @@ jobs:
              if ${CP_SKIP_BUILD:-false}; then
                  exit 0
              fi
-             distros=(${{ env.DISTROS }})
+             distros=(${{ input.DISTROS }})
              if ! ${CP_SKIP_BUILD_EL8_RPM:-false} && [[ ${distros[@]} =~ el8 ]]; then
                  l+=('"el8"')
              fi
@@ -245,13 +261,13 @@ jobs:
                 'el8')
                     CHROOT_NAME="rocky+epel-8-x86_64"
                     DISTRO_NAME="EL"
-                    DISTRO_VERSION='${{ env.EL8_BUILD_VERSION }}'
+                    DISTRO_VERSION='${{ inputs.EL8_BUILD_VERSION }}'
                     COMMIT_STATUS_DISTRO_VERSION="8"
                     ;;
                 'el9')
                     CHROOT_NAME="rocky+epel-9-x86_64"
                     DISTRO_NAME="EL"
-                    DISTRO_VERSION='${{ env.EL9_BUILD_VERSION }}'
+                    DISTRO_VERSION='${{ inputs.EL9_BUILD_VERSION }}'
                     ;;
                 'leap15')
                     CHROOT_NAME='opensuse-leap-${{ env.CP_LEAP15_VERSION &&
@@ -276,14 +292,14 @@ jobs:
       - name: Build RPM Docker image
         id: build-rpm-docker-image
         continue-on-error: true
-        run: docker build --file ${{ env.PACKAGING_DIR }}/packaging/Dockerfile.mockbuild
+        run: docker build --file ${{ inputs.PACKAGING_DIR }}/packaging/Dockerfile.mockbuild
                           --build-arg CACHEBUST=$(date +%s%3N)
                           --build-arg CB0=$(date +%V)
                           --build-arg REPO_FILE_URL=$REPO_FILE_URL
                           --build-arg UID=$(id -u)
                           --build-arg FVERSION=${{ env.FVERSION }}
                           --tag mock-build
-                         ${{ env.PACKAGING_DIR }}
+                         ${{ inputs.PACKAGING_DIR }}
       - name: Build RPM
         id: build-rpm
         continue-on-error: true

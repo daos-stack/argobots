@@ -42,12 +42,32 @@ defaults:
 permissions: {}
 
 jobs:
+  variables:
+    name: Compute outputs
+    runs-on: ubuntu-latest
+    outputs:
+      NAME: ${{ env.NAME }}
+      DISTROS: ${{ env.DISTROS }}
+      EL8_BUILD_VERSION: ${{ env.EL8_BUILD_VERSION }}
+      EL9_BUILD_VERSION: ${{ env.EL9_BUILD_VERSION }}
+      PACKAGING_DIR: ${{ env.PACKAGING_DIR }}
+    steps:
+      - name: Echo
+        if: false
+        run: echo
+
   call-rpm-build:
     name: Build RPM
+    needs: variables
     permissions:
       statuses: write
     uses: ./.github/workflows/rpm-build.yml
-    secrets: inherit
+    with:
+      NAME: ${{ needs.variables.outputs.NAME }}
+      DISTROS: ${{ needs.variables.outputs.DISTROS }}
+      EL8_BUILD_VERSION: ${{ needs.variables.outputs.EL8_BUILD_VERSION }}
+      EL9_BUILD_VERSION: ${{ needs.variables.outputs.EL9_BUILD_VERSION }}
+      PACKAGING_DIR: ${{ needs.variables.outputs.PACKAGING_DIR}}
 
   Test-with-DAOS:
     # TODO: investigate how cancelling this can cancel the downstream job
