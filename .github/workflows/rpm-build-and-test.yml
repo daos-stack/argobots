@@ -359,7 +359,7 @@ jobs:
                             "commit-message":
                               "Override commit pragmas",
                             "test-tag":
-                              "load_mpi test_core_files ${{ env.TEST_TAG }}",
+                              "load_mpi,vm test_core_files,vm ${{ env.TEST_TAG }}",
                             "rpm-test-version":
                               "2.5.101",
                             "functional-test-distros":
