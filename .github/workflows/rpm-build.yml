@@ -15,6 +15,9 @@ on:
       EL9_BUILD_VERSION:
         type: string
         required: true
+      LEAP15_VERSION:
+        type: string
+        required: true
       PACKAGING_DIR:
         type: string
         required: true
@@ -260,10 +263,10 @@ jobs:
                 'leap15')
                     CHROOT_NAME='opensuse-leap-${{ env.CP_LEAP15_VERSION &&
                                                    env.CP_LEAP15_VERSION ||
-                                                   env.LEAP15_VERSION }}-x86_64'
+                                                   inputs.LEAP15_VERSION }}-x86_64'
                     DISTRO_NAME="Leap"
                     DISTRO_VERSION='${{ env.CP_LEAP15_VERSION &&
-                                        env.CP_LEAP15_VERSION || env.LEAP15_VERSION }}'
+                                        env.CP_LEAP15_VERSION || inputs.LEAP15_VERSION }}'
                     ;;
             esac
             echo "CHROOT_NAME=$CHROOT_NAME" >> $GITHUB_ENV
