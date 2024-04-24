@@ -64,6 +64,7 @@ jobs:
     permissions:
       statuses: write
     uses: ./.github/workflows/rpm-build.yml
+    secrets: inherit
     with:
       NAME: ${{ needs.variables.outputs.NAME }}
       DISTROS: ${{ needs.variables.outputs.DISTROS }}
@@ -77,6 +78,7 @@ jobs:
     name: Test RPMs with DAOS
     needs: [variables, Call-RPM-Build]
     uses: ./.github/workflows/rpm-test.yml
+    secrets: inherit
     with:
       NAME: ${{ needs.variables.outputs.NAME }}
       DISTROS: ${{ needs.variables.outputs.DISTROS }}
