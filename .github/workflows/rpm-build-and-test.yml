@@ -329,6 +329,7 @@ jobs:
     # TODO: investigate how cancelling this can cancel the downstream job
     name: Test RPMs with DAOS
     runs-on: [self-hosted, mockbuilder]
+    timeout-minutes: 7200
     needs: [Build-RPM, Calc-rpm-build-matrix]
     strategy:
       fail-fast: false
