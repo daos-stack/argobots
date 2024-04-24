@@ -172,7 +172,7 @@ jobs:
              if ${CP_SKIP_BUILD:-false}; then
                  exit 0
              fi
-             distros=(${{ input.DISTROS }})
+             distros=(${{ inputs.DISTROS }})
              if ! ${CP_SKIP_BUILD_EL8_RPM:-false} && [[ ${distros[@]} =~ el8 ]]; then
                  l+=(el8)
              fi
@@ -192,7 +192,7 @@ jobs:
              if ${CP_SKIP_BUILD:-false}; then
                  exit 0
              fi
-             distros=(${{ input.DISTROS }})
+             distros=(${{ inputs.DISTROS }})
              if ! ${CP_SKIP_BUILD_EL8_RPM:-false} && [[ ${distros[@]} =~ el8 ]]; then
                  l+=('"el8"')
              fi
