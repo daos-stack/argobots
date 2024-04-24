@@ -2,7 +2,6 @@ name: RPM Build
 
 on:
   workflow_call:
-    secrets:
 
 jobs:
   # it's a real shame that this step is even needed.  push events have the commit message in
