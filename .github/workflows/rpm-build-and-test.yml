@@ -43,6 +43,9 @@ permissions: {}
 
 jobs:
   call-rpm-build:
+    name: Build RPM
+    permissions:
+      statuses: write
     uses: ./.github/workflows/rpm-build.yml
     secrets: inherit
 
