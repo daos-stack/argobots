@@ -151,7 +151,8 @@ jobs:
         id: distros
         run: |  # do not use the non-| format for this script
              l=()
-             trap 'echo "text=${l[*]}" >> $GITHUB_OUTPUT' EXIT
+             trap 'echo "text=${l[*]}" >> $GITHUB_OUTPUT'; \
+                   cat $GITHUB_OUTPUT' EXIT
              if ${CP_SKIP_BUILD:-false}; then
                  exit 0
              fi
@@ -170,7 +171,8 @@ jobs:
         # TODO: make this consume the previous step's output
         run: |  # do not use the non-| format for this script
              l=()
-             trap 'echo "text=[$(IFS=","; echo "${l[*]}")]" >> $GITHUB_OUTPUT' EXIT
+             trap 'echo "text=[$(IFS=","; echo "${l[*]}")]" >> $GITHUB_OUTPUT'; \
+                   cat $GITHUB_OUTPUT' EXIT
              if ${CP_SKIP_BUILD:-false}; then
                  exit 0
              fi
