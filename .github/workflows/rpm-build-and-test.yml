@@ -75,7 +75,7 @@ jobs:
   Call-RPM-Test:
     # TODO: investigate how cancelling this can cancel the downstream job
     name: Test RPMs with DAOS
-    needs: variables
+    needs: [variables, Call-RPM-Build]
     uses: ./.github/workflows/rpm-test.yml
     with:
       NAME: ${{ needs.variables.outputs.NAME }}
