@@ -27,7 +27,7 @@ jobs:
         # branch: [master]
         branch: [bmurrell/run-on-dispatch]
     env:
-      PR_REPO: |
+      PR_REPO: >-
         ${{ inputs.NAME }}@PR-${{ github.event.pull_request.number }}:${{ github.run_number }}
     steps:
       - name: Test RPMs with DAOS
