@@ -26,6 +26,9 @@ jobs:
         # DO NOT LAND - using PR as master for now
         # branch: [master]
         branch: [bmurrell/run-on-dispatch]
+    env:
+      PR_REPO: |
+        ${{ inputs.NAME }}@PR-${{ github.event.pull_request.number }}:${{ github.run_number }}
     steps:
       - name: Test RPMs with DAOS
         uses: convictional/trigger-workflow-and-wait@v1.6.5
@@ -44,7 +47,7 @@ jobs:
           #       version, or better yet, no version and it installs the latest
           #       version
           client_payload: '{"pr-repos":
-                              "${{ inputs.NAME }}@PR-${{ github.event.pull_request.number }}:${{ env.GITHUB_RUN_NUMBER }}",
+                              "${{ env.PR_REPO }}",
                             "commit-message":
                               "Override commit pragmas",
                             "test-tag":
