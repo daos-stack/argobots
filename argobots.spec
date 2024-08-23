@@ -16,7 +16,7 @@ Source: https://github.com/pmodels/%{name}/releases/download/v%{tag}/%{name}-%{t
 Patch0: %{version}..%{commit}.patch
 %endif
 # fix ULTs stacks dump works only once
-Patch1: https://github.com/pmodels/argobots/commit/411e5b344642ebc82190fd8b125db512e5b449d1
+Patch1: https://github.com/pmodels/argobots/commit/411e5b344642ebc82190fd8b125db512e5b449d1.patch
 
 BuildRequires: pkgconfig
 
