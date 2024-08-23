@@ -2,8 +2,9 @@ argobots (1.2-1) unstable; urgency=medium
   [ Brian J. Murrell ]
   * Update to 1.2
   * Add patch 411e5b3 fixing DAOS-14248
+  * Add patch bb0c908 fixing libunwind support
 
- -- Brian J. Murrell <brian.murrell@intel.com>  Wed, 04 Sep 2024 16:08:44 -0400
+ -- Cedric Koch-Hofer <cedric.koch-hofer@intel.com>  Wed, 25 Sep 2024 16:08:44 -0500
 
 argobots (1.1-2) unstable; urgency=medium
   [ Brian J. Murrell ]

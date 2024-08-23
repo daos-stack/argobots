@@ -115,9 +115,10 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %doc README
 
 %changelog
-* Wed Sep 04 2024 Brian J. Murrell <brian.murrell@intel.com> - 1.2-1
+* Wed Sep 25 2024 Cedric Koch-Hofer <cedric.koch-hofer@intel.com> - 1.2-1
 - Update to 1.2
 - Add patch 411e5b3 fixing DAOS-14248
+- Add patch bb0c908 fixing libunwind support
 
 * Tue Jun 06 2023 Brian J. Murrell <brian.murrell@intel.com> - 1.1-3
 - Update to build on EL9
