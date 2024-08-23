@@ -15,6 +15,8 @@ Source: https://github.com/pmodels/%{name}/releases/download/v%{tag}/%{name}-%{t
 %if "%{?commit}" != ""
 Patch0: %{version}..%{commit}.patch
 %endif
+# fix ULTs stacks dump works only once
+Patch1: https://github.com/pmodels/argobots/commit/411e5b344642ebc82190fd8b125db512e5b449d1
 
 BuildRequires: pkgconfig
 
@@ -111,7 +113,7 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %doc README
 
 %changelog
-* Tue Apr 02 2024 Brian J. Murrell <brian.murrell@intel.com> - 1.2-1
+* Wed Sep 04 2024 Brian J. Murrell <brian.murrell@intel.com> - 1.2-1
 - Update to 1.2
 - Add patch 411e5b3 fixing DAOS-14248
 
