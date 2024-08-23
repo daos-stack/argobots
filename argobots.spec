@@ -79,7 +79,7 @@ if true || [ ! -f configure ]; then
     ./autogen.sh
 fi
 # defaults: with-dlopen can be over-rode:
-%configure --enable-valgrind --enable-stack-unwind
+%configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal
 make %{?_smp_mflags} V=1
 
 %install
