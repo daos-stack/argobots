@@ -15,7 +15,7 @@ Source: https://github.com/pmodels/%{name}/releases/download/v%{tag}/%{name}-%{t
 %if "%{?commit}" != ""
 Patch0: %{version}..%{commit}.patch
 %endif
-# Fix ULTs stacks dump works only once
+# Fix DAOS-14248: ULTs stacks dump works only once
 Patch1: https://github.com/pmodels/argobots/commit/411e5b344642ebc82190fd8b125db512e5b449d1.patch
 # Restore the libunwind support
 Patch2: https://github.com/pmodels/argobots/commit/bb0c908abfac4bfe37852eee621930634183c6aa.patch
@@ -115,10 +115,10 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %doc README
 
 %changelog
-* Wed Sep 25 2024 Cedric Koch-Hofer <cedric.koch-hofer@intel.com> - 1.2-1
+* Wed Oct 02 2024 Cedric Koch-Hofer <cedric.koch-hofer@intel.com> - 1.2-1
 - Update to 1.2
-- Add patch 411e5b3 fixing DAOS-14248
-- Add patch bb0c908 fixing libunwind support
+- Add patch 411e5b3 Fix DAOS-14248: ULTs stacks dump works only once
+- Add patch bb0c908 Restore the libunwind support
 
 * Tue Jun 06 2023 Brian J. Murrell <brian.murrell@intel.com> - 1.1-3
 - Update to build on EL9
