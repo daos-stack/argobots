@@ -15,8 +15,10 @@ Source: https://github.com/pmodels/%{name}/releases/download/v%{tag}/%{name}-%{t
 %if "%{?commit}" != ""
 Patch0: %{version}..%{commit}.patch
 %endif
-# fix ULTs stacks dump works only once
+# Fix ULTs stacks dump works only once
 Patch1: https://github.com/pmodels/argobots/commit/411e5b344642ebc82190fd8b125db512e5b449d1.patch
+# Restore the libunwind support
+Patch2: https://github.com/pmodels/argobots/commit/bb0c908abfac4bfe37852eee621930634183c6aa.patch
 
 BuildRequires: pkgconfig
 
