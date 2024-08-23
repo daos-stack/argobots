@@ -11,8 +11,10 @@ Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
 Url: http://www.argobots.org/
-#Source: https://api.github.com/repos/pmodels/$(NAME)/tarball/31703b1
 Source: https://github.com/pmodels/%{name}/releases/download/v%{tag}/%{name}-%{tag}.tar.gz
+%if "%{?commit}" != ""
+Patch0: %{version}..%{commit}.patch
+%endif
 
 BuildRequires: pkgconfig
 
