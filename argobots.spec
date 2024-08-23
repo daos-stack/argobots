@@ -111,6 +111,7 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %changelog
 * Tue Apr 02 2024 Brian J. Murrell <brian.murrell@intel.com> - 1.2-1
 - Update to 1.2
+- Add patch 411e5b3 fixing DAOS-14248
 
 * Tue Jun 06 2023 Brian J. Murrell <brian.murrell@intel.com> - 1.1-3
 - Update to build on EL9
