@@ -1,3 +1,11 @@
+argobots (1.2-1) unstable; urgency=medium
+  [ Cedric Koch-Hofer]
+  * Update to 1.2
+  * Add patch 411e5b3 Fix DAOS-14248: ULTs stacks dump works only once
+  * Add patch bb0c908 Restore the libunwind support
+
+ -- Cedric Koch-Hofer <cedric.koch-hofer@intel.com>  Wed, 02 Oct 2024 16:08:44 -0500
+
 argobots (1.1-2) unstable; urgency=medium
   [ Brian J. Murrell ]
   * NOOP change to keep parity with RPM versioning

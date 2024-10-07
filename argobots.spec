@@ -1,18 +1,24 @@
 Name: argobots
 
 %global major 1
-%global minor 1
+%global minor 2
 #%%global prerelease
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
-Release: 3%{?dist}
+Release: 1%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
 Url: http://www.argobots.org/
-#Source: https://api.github.com/repos/pmodels/$(NAME)/tarball/31703b1
 Source: https://github.com/pmodels/%{name}/releases/download/v%{tag}/%{name}-%{tag}.tar.gz
+%if "%{?commit}" != ""
+Patch0: %{version}..%{commit}.patch
+%endif
+# Fix DAOS-14248: ULTs stacks dump works only once
+Patch1: https://github.com/pmodels/argobots/commit/411e5b344642ebc82190fd8b125db512e5b449d1.patch
+# Restore the libunwind support
+Patch2: https://github.com/pmodels/argobots/commit/bb0c908abfac4bfe37852eee621930634183c6aa.patch
 
 BuildRequires: pkgconfig
 
@@ -73,7 +79,7 @@ if true || [ ! -f configure ]; then
     ./autogen.sh
 fi
 # defaults: with-dlopen can be over-rode:
-%configure --enable-valgrind --enable-stack-unwind
+%configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal
 make %{?_smp_mflags} V=1
 
 %install
@@ -109,6 +115,11 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %doc README
 
 %changelog
+* Wed Oct 02 2024 Cedric Koch-Hofer <cedric.koch-hofer@intel.com> - 1.2-1
+- Update to 1.2
+- Add patch 411e5b3 Fix DAOS-14248: ULTs stacks dump works only once
+- Add patch bb0c908 Restore the libunwind support
+
 * Tue Jun 06 2023 Brian J. Murrell <brian.murrell@intel.com> - 1.1-3
 - Update to build on EL9
 
