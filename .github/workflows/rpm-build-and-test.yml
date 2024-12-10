@@ -1,9 +1,5 @@
 name: RPM Build and Test
 
-env:
-  # TODO: Surely this is a GH variable of some sort for the name of the repo
-  NAME: argobots
-
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +18,7 @@ on:
       - master
 
 concurrency:
-  group: rpm-build-and-test-${{ github.head_ref  || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 defaults:
@@ -57,7 +53,7 @@ jobs:
       TEST_TAG: ${{ vars.TEST_TAG }}
       PACKAGING_DIR: ${{ vars.PACKAGING_DIR }}
     outputs:
-      NAME: ${{ env.NAME }}
+      NAME: ${{ steps.NAME.outputs.text }}
       DISTROS: ${{ env.DISTROS }}
       EL8_BUILD_VERSION: ${{ env.EL8_BUILD_VERSION }}
       EL9_BUILD_VERSION: ${{ env.EL9_BUILD_VERSION }}
@@ -65,9 +61,11 @@ jobs:
       PACKAGING_DIR: ${{ env.PACKAGING_DIR }}
       TEST_TAG: ${{ env.TEST_TAG }}
     steps:
-      - name: Echo
-        if: false
-        run: echo
+      - name: NAME
+        id: NAME
+        run: |
+         repo="${{ github.repository }}"
+         echo "text=${repo#*/}" >> $GITHUB_OUTPUT
 
   Call-RPM-Build:
     name: Build RPM
