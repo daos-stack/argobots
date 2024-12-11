@@ -73,7 +73,8 @@ jobs:
     if: inputs.rpm-test-version == ''
     permissions:
       statuses: write
-    uses: daos-stack/actions-lib/.github/workflows/rpm-build.yml@v1
+    # yamllint disable-line rule:line-length
+    uses: daos-stack/actions-lib/.github/workflows/rpm-build.yml@bmurrell/downstream-test-release-2.6
     secrets: inherit
     with:
       NAME: ${{ needs.Variables.outputs.NAME }}
@@ -88,7 +89,8 @@ jobs:
     # TODO: investigate how cancelling this can cancel the downstream job
     name: Test RPMs with DAOS
     needs: [Variables, Call-RPM-Build]
-    uses: daos-stack/actions-lib/.github/workflows/rpm-test.yml@v1
+    # yamllint disable-line rule:line-length
+    uses: daos-stack/actions-lib/.github/workflows/rpm-test.yml@bmurrell/downstream-test-release-2.6
     # it would be better if we could do this in rpm-test.yml but we can't because it causes:
     # The nested job 'Test-with-DAOS' is requesting 'issues: write', but is only allowed
     # 'issues: none'.
