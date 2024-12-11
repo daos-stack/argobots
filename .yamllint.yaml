@@ -1,0 +1,23 @@
+# Yamllint configuration file, used by github actions and commit hooks.
+#
+# The yamllint tool will use .yamllint in preference to this file and it is in .gitignore so users
+# can create one locally to overrule these settings for local commit hooks.
+
+extends: default
+
+rules:
+  line-length:
+    max: 100
+  indentation:
+    spaces: 2
+  truthy:
+    allowed-values: ['true', 'false', 'True', 'False']
+    check-keys: false
+  document-start:
+    present: false
+  document-end:
+    present: false
+
+ignore: |
+  /_topdir/
+  /.git/
