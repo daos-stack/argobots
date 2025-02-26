@@ -17,6 +17,7 @@
 CONFIGURE_FLAGS += --enable-stack-unwind
 # configure with Valgrind support
 CONFIGURE_FLAGS += --enable-valgrind
+CONFIGURE_FLAGS += --enable-checks=no
 
 %:
 	dh $@
