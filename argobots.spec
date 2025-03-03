@@ -6,7 +6,7 @@ Name: argobots
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
@@ -79,7 +79,7 @@ if true || [ ! -f configure ]; then
     ./autogen.sh
 fi
 # defaults: with-dlopen can be over-rode:
-%configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal
+%configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal --disable-mem-pool
 make %{?_smp_mflags} V=1
 
 %install
@@ -115,6 +115,9 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %doc README
 
 %changelog
+* Mon Mar 03 2025 Kenneth Cain <kenneth.cain@hpe.com> - 1.2-2
+- Test disable mem pool
+
 * Wed Oct 02 2024 Cedric Koch-Hofer <cedric.koch-hofer@intel.com> - 1.2-1
 - Update to 1.2
 - Add patch 411e5b3 Fix DAOS-14248: ULTs stacks dump works only once
