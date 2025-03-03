@@ -6,7 +6,7 @@ Name: argobots
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
-Release: 1%{?dist}
+Release: 1.testdmp%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
@@ -79,7 +79,7 @@ if true || [ ! -f configure ]; then
     ./autogen.sh
 fi
 # defaults: with-dlopen can be over-rode:
-%configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal
+%configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal --disable-mem-pool
 make %{?_smp_mflags} V=1
 
 %install
