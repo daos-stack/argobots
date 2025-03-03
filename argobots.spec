@@ -6,7 +6,7 @@ Name: argobots
 %global tag %{major}.%{minor}%{?prerelease}
 
 Version: %{major}.%{minor}%{?prerelease:~%{prerelease}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Lightweight, low-level threading and tasking framework
 Group: System Environment/Libraries
 License: UChicago Argonne, LLC -- Argobots License
@@ -19,6 +19,7 @@ Patch0: %{version}..%{commit}.patch
 Patch1: https://github.com/pmodels/argobots/commit/411e5b344642ebc82190fd8b125db512e5b449d1.patch
 # Restore the libunwind support
 Patch2: https://github.com/pmodels/argobots/commit/bb0c908abfac4bfe37852eee621930634183c6aa.patch
+Patch3: https://github.com/liw/argobots/commit/7d445e79f2cae0b19f630eabc892ba109cfde195.patch
 
 BuildRequires: pkgconfig
 
@@ -79,7 +80,7 @@ if true || [ ! -f configure ]; then
     ./autogen.sh
 fi
 # defaults: with-dlopen can be over-rode:
-%configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal
+%configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal --disable-mem-pool
 make %{?_smp_mflags} V=1
 
 %install
@@ -115,6 +116,9 @@ rm -f %{buildroot}%{_libdir}/*.{l,}a
 %doc README
 
 %changelog
+* Fri Mar 07 2025 Li Wei <liwei@hpe.com> - 1.2-2
+- Add patch for mprotect experiment
+
 * Wed Oct 02 2024 Cedric Koch-Hofer <cedric.koch-hofer@intel.com> - 1.2-1
 - Update to 1.2
 - Add patch 411e5b3 Fix DAOS-14248: ULTs stacks dump works only once
