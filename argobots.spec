@@ -79,6 +79,7 @@ if true || [ ! -f configure ]; then
     ./autogen.sh
 fi
 # defaults: with-dlopen can be over-rode:
+# testing with disable mem pool below
 %configure --enable-valgrind --enable-stack-unwind --enable-option-checking=fatal --disable-mem-pool
 make %{?_smp_mflags} V=1
 
