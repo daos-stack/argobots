@@ -2,3 +2,4 @@
 from Config import *
 
 addFilter('W: invalid-license UChicago Argonne, LLC -- Argobots License')
+addFilter('E: spelling-error .* tasklets')
